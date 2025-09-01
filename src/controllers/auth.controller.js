@@ -1,0 +1,219 @@
+// Data
+const texts = require("../data/texts");
+
+// Bot service
+const { sendMessage } = require("../services/bot");
+
+// Utils
+const { generateToken } = require("../utils/jwt");
+const { getRandomNumber } = require("../utils/helpers");
+
+// Models
+const User = require("../models/User");
+const VerificationCode = require("../models/VerificationCode");
+
+// Send verification code via telegram bot
+const sentVerificationCode = async (chatId, code) => {
+  if (!chatId) return false;
+  return await sendMessage(chatId, texts.verificationCodeSent(code));
+};
+
+// Register
+const register = async (req, res) => {
+  try {
+    const phone = Number(req.body.phone);
+    const { firstName, lastName, password } = req.body;
+
+    let user = await User.findOne({ phone });
+
+    // If user exists & already verified
+    if (user && user.isVerified) {
+      return res.status(400).json({
+        code: "phoneAlreadyUsed",
+        message: "Telefon raqam allaqachon ishlatilgan",
+      });
+    }
+
+    // If user exists but not verified yet
+    if (user && !user.isVerified) {
+      // Get latest verification code
+      const lastCode = await VerificationCode.findOne({ phone }).sort({
+        createdAt: -1,
+      });
+
+      if (lastCode) {
+        const diff = (Date.now() - lastCode.createdAt.getTime()) / 1000;
+
+        // Prevent sending new code within 60 seconds
+        if (diff < 60) {
+          return res.json({
+            code: "codeAlreadySent",
+            createdAt: lastCode.createdAt,
+            expiresAt: lastCode.expiresAt,
+            message: "Kod allaqachon yuborilgan",
+          });
+        }
+      }
+
+      // Otherwise generate and send a new code
+      const code = getRandomNumber(1000, 9999);
+      const isSent = await sentVerificationCode(user.chatId, code);
+      const verificationCode = await VerificationCode.create({
+        code,
+        phone,
+        isSent,
+      });
+
+      return res.json({
+        code: "codeSent",
+        createdAt: verificationCode.createdAt,
+        expiresAt: verificationCode.expiresAt,
+        message: "Hisobni tasdiqlash kodi yuborildi",
+      });
+    }
+
+    // If user does not exist, create new one
+    user = await User.create({ firstName, lastName, phone, password });
+
+    const code = getRandomNumber(1000, 9999);
+    const isSent = await sentVerificationCode(user.chatId, code);
+    const verificationCode = await VerificationCode.create({
+      code,
+      phone,
+      isSent,
+    });
+
+    res.status(201).json({
+      code: "codeSent",
+      createdAt: verificationCode.createdAt,
+      expiresAt: verificationCode.expiresAt,
+      message: "Hisob yaratildi, kod yuborildi",
+    });
+  } catch (err) {
+    res.status(500).json({
+      code: "serverError",
+      message: err.message || "Serverda ichki xatolik",
+    });
+  }
+};
+
+// Verify
+const verify = async (req, res) => {
+  try {
+    const code = Number(req.body.code);
+    const phone = Number(req.body.phone);
+    const { passwrod, firstName, lastName } = req.body;
+
+    // Get latest sent code
+    const verificationCode = await VerificationCode.findOne({ phone, code });
+
+    if (!verificationCode) {
+      return res.status(400).json({
+        code: "codeNotSent",
+        message: "Avval kod yuborilmagan",
+      });
+    }
+
+    // Check expiration (5 minutes)
+    const seconds = (Date.now() - verificationCode.createdAt.getTime()) / 1000;
+    if (seconds > 300) {
+      return res.status(400).json({
+        code: "codeExpired",
+        message: "Kod muddati tugagan, qayta yuboring",
+      });
+    }
+
+    // If code is invalid
+    if (verificationCode.code !== code) {
+      return res.status(400).json({
+        code: "codeInvalid",
+        message: "Kod noto'g'ri",
+      });
+    }
+
+    // If valid, verify user
+    const user = await User.findOneAndUpdate(
+      { phone },
+      { isVerified: true, passwrod, firstName, lastName },
+      { new: true }
+    ).select("-password");
+
+    const token = generateToken(user);
+
+    res.json({
+      user,
+      token,
+      code: "accountVerified",
+      message: "Hisob tasdiqlandi",
+    });
+  } catch (err) {
+    res.status(500).json({
+      code: "serverError",
+      message: err.message || "Serverda ichki xatolik",
+    });
+  }
+};
+
+// Login
+const login = async (req, res) => {
+  try {
+    const password = req.body.password;
+    const phone = Number(req.body.phone);
+    const user = await User.findOne({ phone });
+
+    if (!user) {
+      return res.status(400).json({
+        code: "invalidCredentials",
+        message: "Telefon raqam yoki parol noto'g'ri",
+      });
+    }
+
+    if (!user.isVerified) {
+      return res.status(403).json({
+        code: "accountNotVerified",
+        message: "Hisob tasdiqlanmagan",
+      });
+    }
+
+    const isMatch = await user.comparePassword(password);
+
+    if (!isMatch) {
+      return res.status(400).json({
+        code: "invalidCredentials",
+        message: "Telefon raqam yoki parol noto'g'ri",
+      });
+    }
+
+    const token = generateToken(user);
+    res.json({
+      user,
+      token,
+      code: "loginSuccess",
+      message: "Hisobingizga muvaffaqiyatli kirdingiz",
+    });
+  } catch (err) {
+    res.status(500).json({
+      code: "serverError",
+      message: err.message || "Serverda ichki xatolik",
+    });
+  }
+};
+
+// Get profile
+const profile = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select("-password");
+    res.json({
+      user,
+      code: "profileSuccess",
+      message: "Profil ma'lumotlari olindi",
+    });
+  } catch (err) {
+    res.status(500).json({
+      code: "serverError",
+      message: err.message || "Serverda ichki xatolik",
+    });
+  }
+};
+
+module.exports = { profile, register, login, verify };

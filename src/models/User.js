@@ -1,60 +1,35 @@
-const mongoose = require('mongoose');
+const bcrypt = require("bcrypt");
+const mongoose = require("mongoose");
 
-const userSchema = new mongoose.Schema({
-  username: {
-    type: String,
-    required: false,
+const User = new mongoose.Schema(
+  {
+    chatId: { type: Number },
+    lastName: { type: String },
+    balance: { type: Number, default: 0 },
+    isActive: { type: Boolean, default: true },
+    password: { type: String, required: true },
+    firstName: { type: String, required: true },
+    isVerified: { type: Boolean, default: false },
+    phone: { type: Number, required: true, unique: true },
+    avatar: { type: mongoose.Schema.Types.ObjectId, ref: "Photo" },
+    role: {
+      type: String,
+      default: "student",
+      enum: ["student", "teacher", "supervisor", "admin", "owner"],
+    },
   },
-  firstName: {
-    type: String,
-    required: true,
-  },
-  lastName: {
-    type: String,
-    required: false,
-  },
-  phoneNumber: {
-    type: String,
-    required: true,
-    unique: true,
-  },
-  sessionString: {
-    type: String,
-    required: false,
-  },
-  isActive: {
-    type: Boolean,
-    default: true,
-  },
-  twoFactorEnabled: {
-    type: Boolean,
-    default: false,
-  },
-  twoFactorSecret: {
-    type: String,
-    required: false,
-  },
-  lastLoginAt: {
-    type: Date,
-    default: Date.now,
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now,
-  },
-  updatedAt: {
-    type: Date,
-    default: Date.now,
-  },
-});
+  { timestamps: true }
+);
 
-// Update timestamp on save
-userSchema.pre('save', function(next) {
-  this.updatedAt = new Date();
+User.pre("save", async function (next) {
+  if (!this.isModified("password")) return next();
+  const salt = await bcrypt.genSalt(10);
+  this.password = await bcrypt.hash(this.password, salt);
   next();
 });
 
-// Index for faster queries
-userSchema.index({ telegramId: 1, phoneNumber: 1 });
+User.methods.comparePassword = async function (password) {
+  return bcrypt.compare(password, this.password);
+};
 
-module.exports = mongoose.model('User', userSchema);
+module.exports = mongoose.model("User", User);

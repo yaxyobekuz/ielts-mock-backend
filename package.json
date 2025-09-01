@@ -1,5 +1,5 @@
 {
-  "name": "ielts-mock",
+  "name": "ielts-mock-backend",
   "version": "1.0.0",
   "description": "IELTS mockup",
   "main": "index.js",

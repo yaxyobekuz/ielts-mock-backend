@@ -73,7 +73,13 @@ const register = async (req, res) => {
     }
 
     // If user does not exist, create new one
-    user = await User.create({ firstName, lastName, phone, password });
+    user = await User.create({
+      phone,
+      password,
+      lastName,
+      firstName,
+      role: "supervisor",
+    });
 
     const code = getRandomNumber(1000, 9999);
     const isSent = await sentVerificationCode(user.chatId, code);

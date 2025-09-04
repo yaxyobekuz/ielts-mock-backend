@@ -36,6 +36,12 @@ const Section = new mongoose.Schema(
 
     // flowchart
     items: { title: { type: String }, data: [{ text: { type: String } }] },
+
+    createdBy: {
+      ref: "User",
+      required: true,
+      type: mongoose.Schema.Types.ObjectId,
+    },
   },
   { timestamps: true }
 );

@@ -1,4 +1,5 @@
 // Models
+const Part = require("../models/Part");
 const Test = require("../models/Test");
 
 // Create test
@@ -14,12 +15,30 @@ const createTest = async (req, res) => {
   }
 
   try {
-    const test = await Test.create({ title, image, description, createdBy });
+    const partData = { number: 1, createdBy, totalQuestions: 0 };
+    const part1 = await Part.create(partData);
+    const part2 = await Part.create(partData);
+    const part3 = await Part.create(partData);
+
+    const test = await Test.create({
+      title,
+      image,
+      createdBy,
+      description,
+      reading: [part1._id],
+      writing: [part2._id],
+      listening: [part3._id],
+    });
 
     res.status(201).json({
-      test,
       code: "testCreated",
       message: "Yangi test muvaffaqiyatli yaratildi",
+      test: {
+        ...test.toObject(),
+        reading: [part1],
+        writing: [part2],
+        listening: [part3],
+      },
     });
   } catch (err) {
     res.status(500).json({
@@ -41,14 +60,16 @@ const getTests = async (req, res) => {
     if (mine) {
       tests = await Test.find({ createdBy })
         .populate("createdBy", "firstName lastName role avatar")
-        .select("-__v");
+        .select("-__v")
+        .sort({ createdAt: -1 });
     }
 
     // All tests
     else {
       tests = await Test.find()
         .populate("createdBy", "firstName lastName role avatar")
-        .select("-__v");
+        .select("-__v")
+        .sort({ createdAt: -1 });
     }
 
     res.json({
@@ -57,6 +78,33 @@ const getTests = async (req, res) => {
       message: "Testlar muvaffaqiyatli olindi",
     });
   } catch (err) {
+    res.status(500).json({
+      code: "serverError",
+      message: err.message || "Serverda ichki xatolik",
+    });
+  }
+};
+
+// Get latest tests with limit
+const getLatestTests = async (req, res) => {
+  const { limit } = req.query;
+  const createdBy = req.user.id;
+  const max = parseInt(limit) || 5;
+
+  try {
+    const tests = await Test.find({ createdBy })
+      .sort({ updatedAt: -1 })
+      .limit(max)
+      .select("-__v");
+
+    res.json({
+      tests,
+      code: "latestTestsFetched",
+      message: "Latest tests fetched successfully",
+    });
+  } catch (err) {
+    console.log(err);
+
     res.status(500).json({
       code: "serverError",
       message: err.message || "Serverda ichki xatolik",
@@ -173,4 +221,5 @@ module.exports = {
   updateTest,
   deleteTest,
   getTestById,
+  getLatestTests,
 };

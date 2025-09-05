@@ -1,6 +1,7 @@
 // Models
 const Part = require("../models/Part");
 const Section = require("../models/Section");
+const { pickAllowedFields } = require("../utils/helpers");
 
 // Create new section
 const createSection = async (req, res) => {
@@ -70,21 +71,36 @@ const getSectionById = async (req, res) => {
 
 // Update section
 const updateSection = async (req, res) => {
+  const { id } = req.params;
+  const createdBy = req.user.id;
+
+  const allowedFields = [
+    "text",
+    "title",
+    "items",
+    "groups",
+    "options",
+    "answers",
+    "description",
+    "questionsCount",
+  ];
+  const sectionData = pickAllowedFields(req.body, allowedFields);
+
   try {
-    const { id } = req.params;
+    const section = await Section.findOneAndUpdate(
+      { _id: id, createdBy },
+      sectionData,
+      { new: true }
+    );
 
-    const updated = await Section.findByIdAndUpdate(id, req.body, {
-      new: true,
-    });
-
-    if (!updated) {
+    if (!section) {
       return res
         .status(404)
         .json({ code: "sectionNotFound", message: "Section not found" });
     }
 
     res.json({
-      section: updated,
+      section,
       code: "sectionUpdated",
       message: "Section updated successfully",
     });

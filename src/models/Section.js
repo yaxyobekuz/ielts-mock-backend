@@ -1,4 +1,11 @@
+// Models
+const Part = require("./Part");
+
+// Mongoose
 const mongoose = require("mongoose");
+
+// Helpers
+const { countSectionQuestions } = require("../utils/helpers");
 
 const Answer = new mongoose.Schema({ text: { type: String } });
 
@@ -48,5 +55,52 @@ const Section = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+// Helper to update totalQuestions in Part
+const updatePartQuestions = async (partId) => {
+  const part = await Part.findById(partId).populate("sections");
+  if (part) {
+    part.totalQuestions = part.sections.reduce(
+      (sum, sec) => sum + (sec.questionsCount || 0),
+      0
+    );
+    await part.save();
+  }
+};
+
+// Before
+Section.pre("save", function (next) {
+  this.questionsCount = countSectionQuestions(this);
+  next();
+});
+
+Section.pre(["findOneAndUpdate", "updateOne"], async function (next) {
+  const update = this.getUpdate();
+  if (!update) return next();
+
+  // Get old document
+  const docToUpdate = await this.model.findOne(this.getQuery());
+  if (!docToUpdate) return next();
+
+  // Calculate questionsCount if data is being changed
+  const toCalc = { ...update, type: update.type || docToUpdate.type };
+  update.questionsCount = countSectionQuestions(toCalc);
+
+  this.setUpdate(update);
+  next();
+});
+
+// After
+Section.post("save", async function (doc) {
+  if (doc.partId) await updatePartQuestions(doc.partId);
+});
+
+Section.post(["findOneAndUpdate", "updateOne"], async function (doc) {
+  if (doc?.partId) await updatePartQuestions(doc.partId);
+});
+
+Section.post(["findOneAndDelete", "deleteOne"], async function (doc) {
+  if (doc?.partId) await updatePartQuestions(doc.partId);
+});
 
 module.exports = mongoose.model("Section", Section);

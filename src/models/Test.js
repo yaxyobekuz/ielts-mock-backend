@@ -1,13 +1,23 @@
 const mongoose = require("mongoose");
 
-const TestSchema = new mongoose.Schema(
+const Test = new mongoose.Schema(
   {
     image: { type: String },
     description: { type: String },
     title: { type: String, required: true },
-    reading: [{ ref: "Part", type: mongoose.Schema.Types.ObjectId }],
-    writing: [{ ref: "Part", type: mongoose.Schema.Types.ObjectId }],
-    listening: [{ ref: "Part", type: mongoose.Schema.Types.ObjectId }],
+    totalParts: { type: Number, required: true, default: 0 },
+    reading: {
+      partsCount: { type: Number, required: true, default: 0 },
+      parts: [{ ref: "Part", type: mongoose.Schema.Types.ObjectId }],
+    },
+    writing: {
+      partsCount: { type: Number, required: true, default: 0 },
+      parts: [{ ref: "Part", type: mongoose.Schema.Types.ObjectId }],
+    },
+    listening: {
+      partsCount: { type: Number, required: true, default: 0 },
+      parts: [{ ref: "Part", type: mongoose.Schema.Types.ObjectId }],
+    },
     createdBy: {
       ref: "User",
       required: true,
@@ -17,4 +27,4 @@ const TestSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-module.exports = mongoose.model("Test", TestSchema);
+module.exports = mongoose.model("Test", Test);

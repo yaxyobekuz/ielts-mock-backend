@@ -15,29 +15,42 @@ const createTest = async (req, res) => {
   }
 
   try {
-    const partData = { number: 1, createdBy, totalQuestions: 0 };
-    const part1 = await Part.create(partData);
-    const part2 = await Part.create(partData);
-    const part3 = await Part.create(partData);
-
     const test = await Test.create({
       title,
       image,
       createdBy,
       description,
-      reading: [part1._id],
-      writing: [part2._id],
-      listening: [part3._id],
     });
+
+    const getPartData = (module) => ({
+      module,
+      number: 1,
+      createdBy,
+      partsCount: 1,
+      testId: test._id,
+      totalQuestions: 0,
+    });
+
+    // Create parts
+    const writingPart = await Part.create(getPartData("writing"));
+    const readingPart = await Part.create(getPartData("reading"));
+    const listeningPart = await Part.create(getPartData("listening"));
+
+    // Save test
+    test.totalParts = 3;
+    test.reading = { partsCount: 1, parts: [readingPart._id] };
+    test.writing = { partsCount: 1, parts: [writingPart._id] };
+    test.listening = { partsCount: 1, parts: [listeningPart._id] };
+    const savedTest = await test.save();
 
     res.status(201).json({
       code: "testCreated",
       message: "Yangi test muvaffaqiyatli yaratildi",
       test: {
-        ...test.toObject(),
-        reading: [part1],
-        writing: [part2],
-        listening: [part3],
+        ...savedTest.toObject(),
+        reading: [readingPart],
+        writing: [writingPart],
+        listening: [listeningPart],
       },
     });
   } catch (err) {
@@ -120,7 +133,7 @@ const getTestById = async (req, res) => {
     const test = await Test.findById(id)
       .populate("createdBy", "firstName lastName role avatar")
       .populate({
-        path: "listening reading writing",
+        path: "listening.parts reading.parts writing.parts",
         populate: { path: "sections", model: "Section" },
       })
       .select("-__v");

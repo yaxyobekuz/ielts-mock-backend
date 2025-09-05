@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 
-const VerificationCodeSchema = new mongoose.Schema(
+const VerificationCode = new mongoose.Schema(
   {
     code: { type: Number, required: true },
     phone: { type: Number, required: true },
@@ -14,4 +14,4 @@ const VerificationCodeSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-module.exports = mongoose.model("VerificationCode", VerificationCodeSchema);
+module.exports = mongoose.model("VerificationCode", VerificationCode);

@@ -113,7 +113,7 @@ const updatePart = async (req, res, next) => {
   try {
     const part = await Part.findOneAndUpdate({ _id: id, createdBy }, partData, {
       new: true,
-    });
+    }).populate("sections");
 
     if (!part) {
       return res

@@ -1,5 +1,9 @@
+// Models
 const Part = require("../models/Part");
 const Test = require("../models/Test");
+
+// Helpers
+const { pickAllowedFields } = require("../utils/helpers");
 
 // Create new part
 const createPart = async (req, res) => {
@@ -28,7 +32,7 @@ const createPart = async (req, res) => {
     if (partNumber > 6) {
       return res.status(400).json({
         code: "maxParts",
-        message: "Sahifa qo'shishning eng baland darajasiga yetib bo'ldi",
+        message: "Qism qo'shishning eng yuqori darajasiga yetildi",
       });
     }
 
@@ -50,7 +54,7 @@ const createPart = async (req, res) => {
     res.status(201).json({
       part,
       code: "partCreated",
-      message: "New part created successfully",
+      message: "Yangi qism muvaffaqiyatli yaratildi",
     });
   } catch (err) {
     res.status(500).json({ code: "serverError", message: err.message });
@@ -67,7 +71,7 @@ const getParts = async (req, res) => {
     res.json({
       parts,
       code: "partsFetched",
-      message: "All parts fetched successfully",
+      message: "Barcha qismlar muvaffaqiyatli olindi",
     });
   } catch (err) {
     res.status(500).json({ code: "serverError", message: err.message });
@@ -76,9 +80,9 @@ const getParts = async (req, res) => {
 
 // Get part by ID
 const getPartById = async (req, res) => {
-  try {
-    const { id } = req.params;
+  const { id } = req.params;
 
+  try {
     const part = await Part.findById(id)
       .populate("test", "title")
       .populate("sections");
@@ -86,13 +90,13 @@ const getPartById = async (req, res) => {
     if (!part) {
       return res
         .status(404)
-        .json({ code: "partNotFound", message: "Part not found" });
+        .json({ code: "partNotFound", message: "Qism topilmadi" });
     }
 
     res.json({
       part,
       code: "partFetched",
-      message: "Part fetched successfully",
+      message: "Qism muvaffaqiyatli olindi",
     });
   } catch (err) {
     res.status(500).json({ code: "serverError", message: err.message });
@@ -101,21 +105,26 @@ const getPartById = async (req, res) => {
 
 // Update part
 const updatePart = async (req, res) => {
+  const { id } = req.params;
+  const createdBy = req.user.id;
+  const allowedFields = ["text", "description"];
+  const partData = pickAllowedFields(req.body, allowedFields);
+
   try {
-    const { id } = req.params;
+    const part = await Part.findOneAndUpdate({ _id: id, createdBy }, partData, {
+      new: true,
+    });
 
-    const updated = await Part.findByIdAndUpdate(id, req.body, { new: true });
-
-    if (!updated) {
+    if (!part) {
       return res
         .status(404)
-        .json({ code: "partNotFound", message: "Part not found" });
+        .json({ code: "partNotFound", message: "Qism topilmadi" });
     }
 
     res.json({
-      part: updated,
+      part,
       code: "partUpdated",
-      message: "Part updated successfully",
+      message: "Qism muvaffaqiyatli yangilandi",
     });
   } catch (err) {
     res.status(500).json({ code: "serverError", message: err.message });
@@ -131,10 +140,13 @@ const deletePart = async (req, res) => {
     if (!deleted) {
       return res
         .status(404)
-        .json({ code: "partNotFound", message: "Part not found" });
+        .json({ code: "partNotFound", message: "Qism topilmadi" });
     }
 
-    res.json({ code: "partDeleted", message: "Part deleted successfully" });
+    res.json({
+      code: "partDeleted",
+      message: "Qism muvaffaqiyatli o'chirildi",
+    });
   } catch (err) {
     res.status(500).json({ code: "serverError", message: err.message });
   }

@@ -19,7 +19,7 @@ const sentVerificationCode = async (chatId, code) => {
 };
 
 // Register
-const register = async (req, res) => {
+const register = async (req, res, next) => {
   try {
     const phone = Number(req.body.phone);
     const { firstName, lastName, password } = req.body;
@@ -96,15 +96,12 @@ const register = async (req, res) => {
       message: "Hisob yaratildi, kod yuborildi",
     });
   } catch (err) {
-    res.status(500).json({
-      code: "serverError",
-      message: err.message || "Serverda ichki xatolik",
-    });
+    next(err);
   }
 };
 
 // Verify
-const verify = async (req, res) => {
+const verify = async (req, res, next) => {
   try {
     const code = Number(req.body.code);
     const phone = Number(req.body.phone);
@@ -153,15 +150,12 @@ const verify = async (req, res) => {
       message: "Hisob tasdiqlandi",
     });
   } catch (err) {
-    res.status(500).json({
-      code: "serverError",
-      message: err.message || "Serverda ichki xatolik",
-    });
+    next(err);
   }
 };
 
 // Login
-const login = async (req, res) => {
+const login = async (req, res, next) => {
   try {
     const password = req.body.password;
     const phone = Number(req.body.phone);
@@ -198,15 +192,12 @@ const login = async (req, res) => {
       message: "Hisobingizga muvaffaqiyatli kirdingiz",
     });
   } catch (err) {
-    res.status(500).json({
-      code: "serverError",
-      message: err.message || "Serverda ichki xatolik",
-    });
+    next(err);
   }
 };
 
 // Get profile
-const profile = async (req, res) => {
+const profile = async (req, res, next) => {
   try {
     const user = await User.findById(req.user.id).select("-password");
     res.json({
@@ -215,10 +206,7 @@ const profile = async (req, res) => {
       message: "Profil ma'lumotlari olindi",
     });
   } catch (err) {
-    res.status(500).json({
-      code: "serverError",
-      message: err.message || "Serverda ichki xatolik",
-    });
+    next(err);
   }
 };
 

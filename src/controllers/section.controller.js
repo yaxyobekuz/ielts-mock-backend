@@ -4,7 +4,7 @@ const Section = require("../models/Section");
 const { pickAllowedFields } = require("../utils/helpers");
 
 // Create new section
-const createSection = async (req, res) => {
+const createSection = async (req, res, next) => {
   const createdBy = req.user.id;
   const { title, description, type, partId, testId, module } = req.body;
 
@@ -27,12 +27,12 @@ const createSection = async (req, res) => {
       message: "New section created successfully",
     });
   } catch (err) {
-    res.status(500).json({ code: "serverError", message: err.message });
+    next(err);
   }
 };
 
 // Get all sections
-const getSections = async (req, res) => {
+const getSections = async (req, res, next) => {
   try {
     const sections = await Section.find().select("-__v");
 
@@ -42,12 +42,12 @@ const getSections = async (req, res) => {
       message: "All sections fetched successfully",
     });
   } catch (err) {
-    res.status(500).json({ code: "serverError", message: err.message });
+    next(err);
   }
 };
 
 // Get section by ID
-const getSectionById = async (req, res) => {
+const getSectionById = async (req, res, next) => {
   try {
     const { id } = req.params;
 
@@ -65,12 +65,12 @@ const getSectionById = async (req, res) => {
       message: "Section fetched successfully",
     });
   } catch (err) {
-    res.status(500).json({ code: "serverError", message: err.message });
+    next(err);
   }
 };
 
 // Update section
-const updateSection = async (req, res) => {
+const updateSection = async (req, res, next) => {
   const { id } = req.params;
   const createdBy = req.user.id;
 
@@ -105,12 +105,12 @@ const updateSection = async (req, res) => {
       message: "Section updated successfully",
     });
   } catch (err) {
-    res.status(500).json({ code: "serverError", message: err.message });
+    next(err);
   }
 };
 
 // Delete section
-const deleteSection = async (req, res) => {
+const deleteSection = async (req, res, next) => {
   try {
     const { id } = req.params;
 
@@ -126,7 +126,7 @@ const deleteSection = async (req, res) => {
       message: "Section deleted successfully",
     });
   } catch (err) {
-    res.status(500).json({ code: "serverError", message: err.message });
+    next(err);
   }
 };
 

@@ -6,7 +6,7 @@ const Test = require("../models/Test");
 const { pickAllowedFields } = require("../utils/helpers");
 
 // Create new part
-const createPart = async (req, res) => {
+const createPart = async (req, res, next) => {
   const createdBy = req.user.id;
   const { testId, module } = req.body;
 
@@ -57,12 +57,12 @@ const createPart = async (req, res) => {
       message: "Yangi qism muvaffaqiyatli yaratildi",
     });
   } catch (err) {
-    res.status(500).json({ code: "serverError", message: err.message });
+    next(err);
   }
 };
 
 // Get all parts
-const getParts = async (req, res) => {
+const getParts = async (req, res, next) => {
   try {
     const parts = await Part.find()
       .populate("test", "title")
@@ -74,12 +74,12 @@ const getParts = async (req, res) => {
       message: "Barcha qismlar muvaffaqiyatli olindi",
     });
   } catch (err) {
-    res.status(500).json({ code: "serverError", message: err.message });
+    next(err);
   }
 };
 
 // Get part by ID
-const getPartById = async (req, res) => {
+const getPartById = async (req, res, next) => {
   const { id } = req.params;
 
   try {
@@ -99,12 +99,12 @@ const getPartById = async (req, res) => {
       message: "Qism muvaffaqiyatli olindi",
     });
   } catch (err) {
-    res.status(500).json({ code: "serverError", message: err.message });
+    next(err);
   }
 };
 
 // Update part
-const updatePart = async (req, res) => {
+const updatePart = async (req, res, next) => {
   const { id } = req.params;
   const createdBy = req.user.id;
   const allowedFields = ["text", "description"];
@@ -127,12 +127,12 @@ const updatePart = async (req, res) => {
       message: "Qism muvaffaqiyatli yangilandi",
     });
   } catch (err) {
-    res.status(500).json({ code: "serverError", message: err.message });
+    next(err);
   }
 };
 
 // Delete part
-const deletePart = async (req, res) => {
+const deletePart = async (req, res, next) => {
   try {
     const { id } = req.params;
 
@@ -148,7 +148,7 @@ const deletePart = async (req, res) => {
       message: "Qism muvaffaqiyatli o'chirildi",
     });
   } catch (err) {
-    res.status(500).json({ code: "serverError", message: err.message });
+    next(err);
   }
 };
 

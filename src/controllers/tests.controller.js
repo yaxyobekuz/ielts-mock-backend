@@ -3,7 +3,7 @@ const Part = require("../models/Part");
 const Test = require("../models/Test");
 
 // Create test
-const createTest = async (req, res) => {
+const createTest = async (req, res, next) => {
   const createdBy = req.user.id;
   const { title, description = "", image = "" } = req.body;
 
@@ -54,15 +54,12 @@ const createTest = async (req, res) => {
       },
     });
   } catch (err) {
-    res.status(500).json({
-      code: "serverError",
-      message: err.message || "Serverda ichki xatolik",
-    });
+    next(err);
   }
 };
 
 // Get tests
-const getTests = async (req, res) => {
+const getTests = async (req, res, next) => {
   const { mine } = req.query;
   const createdBy = req.user.id;
 
@@ -91,15 +88,12 @@ const getTests = async (req, res) => {
       message: "Testlar muvaffaqiyatli olindi",
     });
   } catch (err) {
-    res.status(500).json({
-      code: "serverError",
-      message: err.message || "Serverda ichki xatolik",
-    });
+    next(err);
   }
 };
 
 // Get latest tests with limit
-const getLatestTests = async (req, res) => {
+const getLatestTests = async (req, res, next) => {
   const { limit } = req.query;
   const createdBy = req.user.id;
   const max = parseInt(limit) || 5;
@@ -118,15 +112,12 @@ const getLatestTests = async (req, res) => {
   } catch (err) {
     console.log(err);
 
-    res.status(500).json({
-      code: "serverError",
-      message: err.message || "Serverda ichki xatolik",
-    });
+    next(err);
   }
 };
 
 // Get single test by ID
-const getTestById = async (req, res) => {
+const getTestById = async (req, res, next) => {
   const { id } = req.params;
 
   try {
@@ -150,15 +141,12 @@ const getTestById = async (req, res) => {
       message: "Test muvaffaqiyatli olindi",
     });
   } catch (err) {
-    res.status(500).json({
-      code: "serverError",
-      message: err.message || "Serverda ichki xatolik",
-    });
+    next(err);
   }
 };
 
 // Update test
-const updateTest = async (req, res) => {
+const updateTest = async (req, res, next) => {
   const updates = {};
   const { id } = req.params;
   const createdBy = req.user.id;
@@ -194,15 +182,12 @@ const updateTest = async (req, res) => {
       message: "Test muvaffaqiyatli yangilandi",
     });
   } catch (err) {
-    res.status(500).json({
-      code: "serverError",
-      message: err.message || "Serverda ichki xatolik",
-    });
+    next(err);
   }
 };
 
 // Delete test
-const deleteTest = async (req, res) => {
+const deleteTest = async (req, res, next) => {
   const { id } = req.params;
   const createdBy = req.user.id;
 
@@ -221,10 +206,7 @@ const deleteTest = async (req, res) => {
       message: "Test muvaffaqiyatli o'chirildi",
     });
   } catch (err) {
-    res.status(500).json({
-      code: "serverError",
-      message: err.message || "Serverda ichki xatolik",
-    });
+    next(err);
   }
 };
 

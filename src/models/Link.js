@@ -5,6 +5,7 @@ const Link = new mongoose.Schema(
     title: { type: String, required: true },
     usedCount: { type: Number, default: 0 },
     testId: { type: String, required: true },
+    visitsCount: { type: Number, default: 0 },
     maxUses: { type: Number, required: true, default: 10 },
     createdBy: {
       ref: "User",

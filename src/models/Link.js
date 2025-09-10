@@ -15,9 +15,9 @@ const Link = new mongoose.Schema(
     usages: [
       {
         ip: String,
+        age: Number,
         name: String,
         phone: String,
-        extra: Object,
         userAgent: String,
         createdAt: { type: Date, default: Date.now },
       },

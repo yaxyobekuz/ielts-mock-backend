@@ -52,8 +52,20 @@ const countSectionQuestions = ({ type, text, items, groups }) => {
   return 0;
 };
 
+// Shuffle
+const shuffleArray = (arr = []) => {
+  if (!arr) return [];
+  const copy = [...arr];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+};
+
 module.exports = {
   delay,
+  shuffleArray,
   getRandomNumber,
   pickAllowedFields,
   countExactMatches,

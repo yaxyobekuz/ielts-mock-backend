@@ -119,15 +119,15 @@ const getLink = async (req, res, next) => {
 
 // Get links
 const getLinks = async (req, res, next) => {
-  const { mine } = req.query;
   const createdBy = req.user.id;
+  const { mine, testId } = req.query;
 
   try {
     let links;
 
     // User links
     if (mine) {
-      links = await Link.find({ createdBy })
+      links = await Link.find({ createdBy, testId })
         .select("-__v -usages -visits")
         .sort({ createdAt: -1 });
     }

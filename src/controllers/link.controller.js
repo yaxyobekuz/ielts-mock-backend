@@ -22,25 +22,32 @@ const prepareTestForUser = async (testId) => {
 
     if (!test) return null;
 
-    // image ni olib tashlash
+    // Remove test.image
     delete test.image;
 
-    // Parts ichidagi sectionsni qayta ishlash
     const handleSections = (sections) => {
       return sections.map((sec) => {
         const section = { ...sec };
 
+        // Remove group correct answer index
         if (section.groups?.length) {
           section.groups = section.groups.map((group) => {
             const g = { ...group };
             delete g.correctAnswerIndex;
-            if (g.answers?.length) {
-              g.answers = shuffleArray(g.answers);
-            }
             return g;
           });
         }
 
+        // Shuffle options.data
+        if (section.options?.data?.length) {
+          section.options = {
+            ...section.options,
+            data: shuffleArray(section.options.data),
+          };
+        }
+
+        // Remove answers
+        if (section.answers) delete section.answers;
         return section;
       });
     };

@@ -7,6 +7,7 @@ const partsRoute = require("../routes/parts");
 const linksRoute = require("../routes/links");
 const uploadRoute = require("../routes/upload");
 const sectionsRoute = require("../routes/sections");
+const submissionRoute = require("../routes/submission");
 
 // Handlers
 const errorHandler = require("../middlewares/errorHandler");
@@ -18,5 +19,6 @@ app.use("/api/parts", partsRoute);
 app.use("/api/links", linksRoute);
 app.use("/api/upload", uploadRoute);
 app.use("/api/sections", sectionsRoute);
+app.use("/api/submissions", submissionRoute);
 
 app.use(errorHandler);

@@ -20,10 +20,20 @@ const sentVerificationCode = async (chatId, code) => {
 
 // Register
 const register = async (req, res, next) => {
-  try {
-    const phone = Number(req.body.phone);
-    const { firstName, lastName, password } = req.body;
+  const phone = Number(req.body.phone);
+  const { firstName, lastName, password } = req.body;
+  const role = req?.params?.role?.toLowerCase() || "student";
 
+  const allowedRoles = ["student", "supervisor"];
+
+  if (!allowedRoles.includes(role)) {
+    return res.status(400).json({
+      code: "roleNotAllowed",
+      message: "Ushbu rolga ruxsat berilmaydi",
+    });
+  }
+
+  try {
     let user = await User.findOne({ phone });
 
     // If user exists & already verified
@@ -73,13 +83,7 @@ const register = async (req, res, next) => {
     }
 
     // If user does not exist, create new one
-    user = await User.create({
-      phone,
-      password,
-      lastName,
-      firstName,
-      role: "supervisor",
-    });
+    user = await User.create({ role, phone, password, lastName, firstName });
 
     const code = getRandomNumber(1000, 9999);
     const isSent = await sentVerificationCode(user.chatId, code);

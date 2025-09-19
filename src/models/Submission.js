@@ -11,10 +11,10 @@ const Submission = new mongoose.Schema(
       writing: { default: {}, type: Map, of: String, required: true },
       listening: { default: {}, type: Map, of: String, required: true },
     },
-    userInfo: {
-      name: { type: String, required: true },
-      phone: { type: String, required: true },
-      age: { type: Number, required: true, min: 7, max: 100 },
+    user: {
+      ref: "User",
+      required: true,
+      type: mongoose.Schema.Types.ObjectId,
     },
     teacher: {
       ref: "User",

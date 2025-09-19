@@ -5,7 +5,8 @@ const Submission = require("../models/Submission");
 
 // Yangi submission yaratish
 const createSubmission = async (req, res, next) => {
-  const { linkId, answers, userInfo } = req.body;
+  const userId = req.user._id;
+  const { linkId, answers } = req.body;
 
   try {
     // Link
@@ -26,10 +27,10 @@ const createSubmission = async (req, res, next) => {
       });
     }
 
-    const submission = await Submission.create({
+    await Submission.create({
       answers,
-      userInfo,
       link: linkId,
+      user: userId,
       test: link.testId,
       finishedAt: Date.now(),
       teacher: link.createdBy,

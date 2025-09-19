@@ -15,10 +15,8 @@ const Link = new mongoose.Schema(
     usages: [
       {
         ip: String,
-        age: Number,
-        name: String,
-        phone: String,
         userAgent: String,
+        userId: mongoose.Schema.Types.ObjectId,
         createdAt: { type: Date, default: Date.now },
       },
     ],
@@ -26,6 +24,7 @@ const Link = new mongoose.Schema(
       {
         ip: String,
         userAgent: String,
+        userId: mongoose.Schema.Types.ObjectId,
         createdAt: { type: Date, default: Date.now },
       },
     ],

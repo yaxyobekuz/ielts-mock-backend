@@ -161,6 +161,7 @@ const getLinks = async (req, res, next) => {
 const getLinkPreview = async (req, res, next) => {
   const ip = req.ip;
   const { id } = req.params;
+  const userId = req.user._id;
   const userAgent = req.headers["user-agent"];
 
   try {
@@ -179,7 +180,7 @@ const getLinkPreview = async (req, res, next) => {
       });
     }
 
-    link.visits.push({ userAgent, ip });
+    link.visits.push({ userAgent, ip, userId });
     link.visitsCount = link.visitsCount + 1;
     await link.save();
 
@@ -203,7 +204,7 @@ const getLinkPreview = async (req, res, next) => {
 const addUsage = async (req, res, next) => {
   const ip = req.ip;
   const { id } = req.params;
-  const { name, phone, age } = req.body;
+  const userId = req.user._id;
   const userAgent = req.headers["user-agent"];
 
   try {
@@ -222,15 +223,8 @@ const addUsage = async (req, res, next) => {
       });
     }
 
-    link.usages.push({
-      ip,
-      age,
-      name,
-      phone,
-      userAgent,
-    });
-
     link.usedCount += 1;
+    link.usages.push({ ip, userId, userAgent });
     await link.save();
 
     const test = await prepareTestForUser(link.testId);

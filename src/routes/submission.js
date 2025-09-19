@@ -14,10 +14,10 @@ const {
   getSubmissionById,
 } = require("../controllers/submission.controller");
 
-router.get("/", getSubmissions);
-router.post("/", createSubmission);
-router.put("/:id", updateSubmission);
-router.get("/:id", getSubmissionById);
-router.delete("/:id", deleteSubmission);
+router.get("/", auth, getSubmissions);
+router.post("/", auth, createSubmission);
+router.put("/:id", auth, updateSubmission);
+router.get("/:id", auth, getSubmissionById);
+router.delete("/:id", auth, deleteSubmission);
 
 module.exports = router;

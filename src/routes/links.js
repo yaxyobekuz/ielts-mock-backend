@@ -17,7 +17,7 @@ const { auth } = require("../middlewares/auth");
 router.get("/", auth, getLinks);
 router.get("/:id", auth, getLink);
 router.post("/", auth, createLink);
-router.post("/:id/usage", addUsage);
-router.get("/:id/preview", getLinkPreview);
+router.post("/:id/usage", auth, addUsage);
+router.get("/:id/preview", auth, getLinkPreview);
 
 module.exports = router;

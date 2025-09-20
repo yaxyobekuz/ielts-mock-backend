@@ -16,8 +16,8 @@ const { auth, roleCheck } = require("../middlewares/auth");
 const notStudent = roleCheck(["teacher", "supervisor", "owner", "admin"]);
 
 router.get("/", auth, getSubmissions);
+router.post("/", auth, createSubmission);
 router.get("/:id", auth, getSubmissionById);
-router.post("/", auth, notStudent, createSubmission);
 router.put("/:id", auth, notStudent, updateSubmission);
 router.delete("/:id", auth, notStudent, deleteSubmission);
 

@@ -34,6 +34,7 @@ const createSubmission = async (req, res, next) => {
       test: link.testId,
       finishedAt: Date.now(),
       teacher: link.createdBy,
+      supervisor: test.supervisor,
     });
 
     res.status(201).json({
@@ -47,11 +48,20 @@ const createSubmission = async (req, res, next) => {
 
 // Barcha submissionlarni olish
 const getSubmissions = async (req, res, next) => {
+  let filter = {};
+  const { _id: userId, role: userRole } = req.user;
+
+  // Filter
+  if (userRole === "teacher") filter.teacher = userId;
+  else if (userRole === "student") filter.user = userId;
+  else if (userRole === "supervisor") filter.supervisor = userId;
+
   try {
-    const submissions = await Submission.find().populate(
-      "test link user teacher"
-    );
-    res.json(submissions);
+    const submissions = await Submission.find(filter)
+      .populate({ path: "user", select: "-phone -password -chatId -balance" })
+      .select("-answers");
+
+    res.json({ code: "submissionsFetched", submissions });
   } catch (err) {
     next(err);
   }

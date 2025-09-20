@@ -4,7 +4,7 @@ const Test = require("../models/Test");
 
 // Create test
 const createTest = async (req, res, next) => {
-  const createdBy = req.user.id;
+  const { _id: createdBy, supervisor } = req.user;
   const { title, description = "", image = "" } = req.body;
 
   if (!title || !title.trim().length) {
@@ -20,6 +20,7 @@ const createTest = async (req, res, next) => {
       image,
       createdBy,
       description,
+      supervisor: supervisor || createdBy,
     });
 
     const getPartData = (module) => ({
@@ -29,6 +30,7 @@ const createTest = async (req, res, next) => {
       partsCount: 1,
       testId: test._id,
       totalQuestions: 0,
+      supervisor: supervisor || createdBy,
     });
 
     // Create parts

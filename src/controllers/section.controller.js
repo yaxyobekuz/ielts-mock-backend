@@ -1,11 +1,13 @@
 // Models
 const Part = require("../models/Part");
 const Section = require("../models/Section");
+
+// Helpers
 const { pickAllowedFields } = require("../utils/helpers");
 
 // Create new section
 const createSection = async (req, res, next) => {
-  const createdBy = req.user.id;
+  const { _id: createdBy, supervisor } = req.user;
   const { title, description, type, partId, testId, module } = req.body;
 
   try {
@@ -17,6 +19,7 @@ const createSection = async (req, res, next) => {
       partId,
       createdBy,
       description,
+      supervisor: supervisor || createdBy,
     });
 
     await Part.findByIdAndUpdate(partId, { $push: { sections: section._id } });

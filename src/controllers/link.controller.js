@@ -72,7 +72,7 @@ const prepareTestForUser = async (testId) => {
 
 // Create link
 const createLink = async (req, res, next) => {
-  const createdBy = req.user.id;
+  const { _id: createdBy, supervisor } = req.user;
   const { title, testId, maxUses } = req.body;
 
   try {
@@ -89,6 +89,7 @@ const createLink = async (req, res, next) => {
       testId,
       maxUses,
       createdBy,
+      supervisor: supervisor || createdBy,
     });
 
     res.status(201).json({

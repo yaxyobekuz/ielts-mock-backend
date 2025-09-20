@@ -7,8 +7,8 @@ const { pickAllowedFields } = require("../utils/helpers");
 
 // Create new part
 const createPart = async (req, res, next) => {
-  const createdBy = req.user.id;
   const { testId, module } = req.body;
+  const { _id: createdBy, supervisor } = req.user;
 
   try {
     const test = await Test.findById(testId);
@@ -22,7 +22,7 @@ const createPart = async (req, res, next) => {
 
     if (!["listening", "reading", "writing"].includes(module)) {
       return res.status(400).json({
-        code: "moduleNotAllow",
+        code: "moduleNotAllowed",
         message: `${module} uchun ruxsat berilmagan`,
       });
     }
@@ -41,6 +41,7 @@ const createPart = async (req, res, next) => {
       testId,
       createdBy,
       number: partNumber,
+      supervisor: supervisor || createdBy,
     });
 
     test[module].parts.push(part);

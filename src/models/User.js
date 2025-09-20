@@ -12,6 +12,7 @@ const User = new mongoose.Schema(
     isVerified: { type: Boolean, default: false },
     phone: { type: Number, required: true, unique: true },
     avatar: { type: mongoose.Schema.Types.ObjectId, ref: "Photo" },
+    supervisor: { ref: "User", type: mongoose.Schema.Types.ObjectId },
     role: {
       type: String,
       default: "student",

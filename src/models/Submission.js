@@ -4,6 +4,7 @@ const Submission = new mongoose.Schema(
   {
     finishedAt: { type: Date },
     startedAt: { type: Date, default: Date.now },
+    isChecked: { type: Boolean, default: false },
     test: { type: mongoose.Schema.Types.ObjectId, ref: "Test", required: true },
     link: { type: mongoose.Schema.Types.ObjectId, ref: "Link", required: true },
     answers: {
@@ -17,6 +18,11 @@ const Submission = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
     },
     teacher: {
+      ref: "User",
+      required: true,
+      type: mongoose.Schema.Types.ObjectId,
+    },
+    supervisor: {
       ref: "User",
       required: true,
       type: mongoose.Schema.Types.ObjectId,

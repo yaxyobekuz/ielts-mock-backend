@@ -12,6 +12,11 @@ const Link = new mongoose.Schema(
       required: true,
       type: mongoose.Schema.Types.ObjectId,
     },
+    supervisor: {
+      ref: "User",
+      required: true,
+      type: mongoose.Schema.Types.ObjectId,
+    },
     usages: [
       {
         ip: String,

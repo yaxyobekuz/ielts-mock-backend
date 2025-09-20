@@ -18,6 +18,11 @@ const Test = new mongoose.Schema(
       partsCount: { type: Number, required: true, default: 0 },
       parts: [{ ref: "Part", type: mongoose.Schema.Types.ObjectId }],
     },
+    supervisor: {
+      ref: "User",
+      required: true,
+      type: mongoose.Schema.Types.ObjectId,
+    },
     createdBy: {
       ref: "User",
       required: true,

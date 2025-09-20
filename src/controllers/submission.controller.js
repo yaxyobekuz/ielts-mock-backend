@@ -69,13 +69,28 @@ const getSubmissions = async (req, res, next) => {
 
 // ID bo‘yicha submission olish
 const getSubmissionById = async (req, res, next) => {
+  let filter = { _id: req.params.id };
+  const { _id: userId, role: userRole } = req.user;
+
+  // Filter
+  if (userRole === "teacher") filter.teacher = userId;
+  else if (userRole === "student") filter.user = userId;
+  else if (userRole === "supervisor") filter.supervisor = userId;
+
   try {
-    const submission = await Submission.findById(req.params.id).populate(
-      "test link user teacher"
-    );
-    if (!submission)
-      return res.status(404).json({ message: "Submission topilmadi" });
-    res.json(submission);
+    const submission = await Submission.findOne(filter).populate({
+      path: "test user teacher",
+      select: "-phone -password -chatId -balance",
+    });
+
+    if (!submission) {
+      return res.status(404).json({
+        code: "submissionNotFound",
+        message: "Javoblar topilmadi",
+      });
+    }
+
+    res.json({ code: "submissionFetched", submission });
   } catch (err) {
     next(err);
   }

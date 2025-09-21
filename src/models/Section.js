@@ -34,7 +34,7 @@ const Section = new mongoose.Schema(
       enum: ["text", "text-draggable", "flowchart", "radio-group"],
     },
 
-    // text
+    // text & text-draggable
     text: { type: String },
     answers: [Answer],
 

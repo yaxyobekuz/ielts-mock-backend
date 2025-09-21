@@ -8,9 +8,9 @@ const Submission = new mongoose.Schema(
     test: { type: mongoose.Schema.Types.ObjectId, ref: "Test", required: true },
     link: { type: mongoose.Schema.Types.ObjectId, ref: "Link", required: true },
     answers: {
-      reading: { default: {}, type: Map, of: String, required: true },
-      writing: { default: {}, type: Map, of: String, required: true },
-      listening: { default: {}, type: Map, of: String, required: true },
+      reading: { default: {}, type: Object, required: true },
+      writing: { default: {}, type: Object, required: true },
+      listening: { default: {}, type: Object, required: true },
     },
     user: {
       ref: "User",

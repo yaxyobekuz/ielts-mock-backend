@@ -3,6 +3,9 @@ const Link = require("../models/Link");
 const Test = require("../models/Test");
 const Submission = require("../models/Submission");
 
+// Helpers
+const { getTestAnswers } = require("../utils/test");
+
 // Yangi submission yaratish
 const createSubmission = async (req, res, next) => {
   const userId = req.user._id;
@@ -90,7 +93,17 @@ const getSubmissionById = async (req, res, next) => {
       });
     }
 
-    res.json({ code: "submissionFetched", submission });
+    const resData = {
+      code: "submissionFetched",
+      submission: { ...submission.toObject() },
+    };
+
+    if (userRole !== "student") {
+      const correctAnswers = await getTestAnswers(submission.test._id);
+      resData.submission.correctAnswers = correctAnswers;
+    }
+
+    res.json(resData);
   } catch (err) {
     next(err);
   }

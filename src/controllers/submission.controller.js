@@ -33,7 +33,7 @@ const createSubmission = async (req, res, next) => {
     await Submission.create({
       answers,
       link: linkId,
-      user: userId,
+      student: userId,
       test: link.testId,
       finishedAt: Date.now(),
       teacher: link.createdBy,
@@ -56,12 +56,15 @@ const getSubmissions = async (req, res, next) => {
 
   // Filter
   if (userRole === "teacher") filter.teacher = userId;
-  else if (userRole === "student") filter.user = userId;
+  else if (userRole === "student") filter.student = userId;
   else if (userRole === "supervisor") filter.supervisor = userId;
 
   try {
     const submissions = await Submission.find(filter)
-      .populate({ path: "user", select: "-phone -password -chatId -balance" })
+      .populate({
+        path: "student",
+        select: "-phone -password -chatId -balance",
+      })
       .select("-answers");
 
     res.json({ code: "submissionsFetched", submissions });
@@ -77,12 +80,12 @@ const getSubmissionById = async (req, res, next) => {
 
   // Filter
   if (userRole === "teacher") filter.teacher = userId;
-  else if (userRole === "student") filter.user = userId;
+  else if (userRole === "student") filter.student = userId;
   else if (userRole === "supervisor") filter.supervisor = userId;
 
   try {
     const submission = await Submission.findOne(filter).populate({
-      path: "test user teacher",
+      path: "test student teacher",
       select: "-phone -password -chatId -balance",
     });
 

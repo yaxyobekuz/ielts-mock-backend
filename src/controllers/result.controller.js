@@ -114,9 +114,9 @@ const getResults = async (req, res, next) => {
   else if (userRole === "supervisor") filter.supervisor = userId;
 
   try {
-    const results = await Result.find(filter).select(
-      "-answers -student -teacher -supervisor -createdBy -link"
-    );
+    const results = await Result.find(filter)
+      .select("-teacher -supervisor -createdBy")
+      .populate("student");
 
     res.json({ code: "resultsFetched", results });
   } catch (err) {

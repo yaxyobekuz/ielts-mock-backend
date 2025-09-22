@@ -3,8 +3,9 @@ const mongoose = require("mongoose");
 const Submission = new mongoose.Schema(
   {
     finishedAt: { type: Date },
+    isScored: { type: Boolean, default: false },
     startedAt: { type: Date, default: Date.now },
-    isChecked: { type: Boolean, default: false },
+    result: { ref: "Result", type: mongoose.Schema.Types.ObjectId },
     test: { type: mongoose.Schema.Types.ObjectId, ref: "Test", required: true },
     link: { type: mongoose.Schema.Types.ObjectId, ref: "Link", required: true },
     answers: {
@@ -12,7 +13,7 @@ const Submission = new mongoose.Schema(
       writing: { default: {}, type: Object, required: true },
       listening: { default: {}, type: Object, required: true },
     },
-    user: {
+    student: {
       ref: "User",
       required: true,
       type: mongoose.Schema.Types.ObjectId,

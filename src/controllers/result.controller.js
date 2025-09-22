@@ -136,8 +136,11 @@ const getResultById = async (req, res, next) => {
 
   try {
     const result = await Result.findOne(filter)
-      .populate("submission")
-      .select("-answers -student -teacher -supervisor -createdBy -link");
+      .populate({
+        path: "submission student",
+        select: `-answers -password -balance -chatId -createdAt -__v -updatedAt`,
+      })
+      .select("-teacher -supervisor -createdBy -__v");
 
     if (!result) {
       return res.status(404).json({

@@ -52,6 +52,10 @@ const countSectionQuestions = ({ type, text, items, groups }) => {
   return 0;
 };
 
+const roundToNearestHalf = (num) => {
+  return Math.round(num * 2) / 2;
+};
+
 // Shuffle
 const shuffleArray = (arr = []) => {
   if (!arr) return [];
@@ -69,5 +73,6 @@ module.exports = {
   getRandomNumber,
   pickAllowedFields,
   countExactMatches,
+  roundToNearestHalf,
   countSectionQuestions,
 };

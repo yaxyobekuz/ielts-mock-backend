@@ -5,6 +5,7 @@ const express = require("express");
 require("../models/Part");
 require("../models/User");
 require("../models/Test");
+require("../models/Result");
 require("../models/Section");
 require("../models/VerificationCode");
 

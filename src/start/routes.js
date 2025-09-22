@@ -5,6 +5,7 @@ const authRoute = require("../routes/auth");
 const testsRoute = require("../routes/tests");
 const partsRoute = require("../routes/parts");
 const linksRoute = require("../routes/links");
+const resultRoute = require("../routes/result");
 const uploadRoute = require("../routes/upload");
 const sectionsRoute = require("../routes/sections");
 const submissionRoute = require("../routes/submission");
@@ -18,6 +19,7 @@ app.use("/api/tests", testsRoute);
 app.use("/api/parts", partsRoute);
 app.use("/api/links", linksRoute);
 app.use("/api/upload", uploadRoute);
+app.use("/api/results", resultRoute);
 app.use("/api/sections", sectionsRoute);
 app.use("/api/submissions", submissionRoute);
 

@@ -82,6 +82,7 @@ const updateSection = async (req, res, next) => {
     "title",
     "items",
     "groups",
+    "coords",
     "options",
     "answers",
     "description",

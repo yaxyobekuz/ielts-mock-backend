@@ -47,6 +47,9 @@ const Section = new mongoose.Schema(
     // flowchart
     items: { title: { type: String }, data: [{ text: { type: String } }] },
 
+    // Dropzone & Input coords
+    coords: { type: mongoose.Schema.Types.Mixed, default: {} },
+
     createdBy: {
       ref: "User",
       required: true,

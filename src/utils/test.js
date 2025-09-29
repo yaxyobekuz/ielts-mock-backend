@@ -41,17 +41,16 @@ const extractSectionAnswers = (
   // Checkbox Group
   else if (type === "checkbox-group") {
     groups.forEach((group) => {
-      let answer = "";
+      const answers = [];
 
       group.correctAnswersIndex?.map((index) => {
-        answer +=
-          (group.answers[index]?.text?.trim()?.toLowerCase() || "") + " ";
+        answers.push(group.answers[index]?.text?.trim()?.toLowerCase() || "");
       });
 
       const answerKey = `${questionNumber}-${
         questionNumber + group.maxSelected - 1
       }`;
-      correctAnswers[answerKey] = answer.trim();
+      correctAnswers[answerKey] = answers;
 
       questionNumber += group.maxSelected;
     });

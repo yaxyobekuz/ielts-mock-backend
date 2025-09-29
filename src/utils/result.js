@@ -1,4 +1,4 @@
-const { roundToNearestHalf } = require("./helpers");
+const { roundToNearestHalf, isEqualStringArray } = require("./helpers");
 
 const formatResultModulesCriteria = ({ writing = [], speaking = [] }) => {
   return {
@@ -70,9 +70,13 @@ const countCorrectAnswers = (answers, correctAnswers) => {
 
   for (const key in correctAnswers) {
     if (answers[key]) {
-      const answer = answers[key]?.trim()?.toLowerCase();
-      const correctAnswer = correctAnswers[key]?.trim()?.toLowerCase();
-      if (answer === correctAnswer) count++;
+      if (typeof answers[key] === "object") {
+        if (isEqualStringArray(answers[key], correctAnswers[key])) count++;
+      } else {
+        const answer = answers[key]?.trim()?.toLowerCase();
+        const correctAnswer = correctAnswers[key]?.trim()?.toLowerCase();
+        if (answer === correctAnswer) count++;
+      }
     }
   }
 

@@ -34,7 +34,7 @@ const createResult = async (req, res, next) => {
       });
     }
 
-    // Test answers { 1:"", ... }
+    // Test answers { 1:"", 2:[""], ... }
     const correctAnswers = await getTestAnswers(submission.test._id);
     if (!correctAnswers) {
       return res.status(404).json({
@@ -43,7 +43,7 @@ const createResult = async (req, res, next) => {
       });
     }
 
-    const userAnswers = submission.answers; // { 1:"", ... }
+    const userAnswers = submission.answers; // { 1:"", 2:[""], ... }
     const formattedCriteria = formatResultModulesCriteria(req.body);
     const { writing: writingScore, speaking: speakingScore } =
       calculateBandScores(formattedCriteria);

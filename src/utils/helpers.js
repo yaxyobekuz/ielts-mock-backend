@@ -62,6 +62,11 @@ const roundToNearestHalf = (num) => {
   return Math.round(num * 2) / 2;
 };
 
+const isEqualStringArray = (arr1, arr2) =>
+  arr1.length === arr2.length &&
+  arr1.slice().sort().join().trim().toLowerCase() ===
+    arr2.slice().sort().join().trim().toLowerCase();
+
 // Shuffle
 const shuffleArray = (arr = []) => {
   if (!arr) return [];
@@ -80,5 +85,6 @@ module.exports = {
   pickAllowedFields,
   countExactMatches,
   roundToNearestHalf,
+  isEqualStringArray,
   countSectionQuestions,
 };

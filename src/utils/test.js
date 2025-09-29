@@ -1,41 +1,63 @@
 const Test = require("../models/Test");
 
-const extractSectionAnswers = ({
-  type,
-  groups,
-  answers,
-  options,
-  questionsCount,
-}) => {
-  let result = [];
+const extractSectionAnswers = (
+  { type, groups, answers, options, questionsCount },
+  initialQuestionNumber
+) => {
+  let correctAnswers = {};
+  let questionNumber = initialQuestionNumber || 0;
 
   // Text
   if (type === "text") {
     Array.from({ length: questionsCount }, (_, index) => {
-      result.push(answers[index]?.text?.trim()?.toLowerCase() || "");
-    });
+      correctAnswers[questionNumber] =
+        answers[index]?.text?.trim()?.toLowerCase() || "";
 
-    return result;
+      questionNumber++;
+    });
   }
 
   // Text Draggable or Flowchart
-  if (type === "text-draggable" || type === "flowchart") {
+  else if (type === "text-draggable" || type === "flowchart") {
     Array.from({ length: questionsCount }, (_, index) => {
-      result.push(options.data[index]?.option?.trim()?.toLowerCase() || "");
-    });
+      correctAnswers[questionNumber] =
+        options.data[index]?.option?.trim()?.toLowerCase() || "";
 
-    return result;
+      questionNumber++;
+    });
   }
 
   // Radio Group
-  if (type === "radio-group") {
+  else if (type === "radio-group") {
     groups.forEach((group) => {
       const answer = group.answers[group.correctAnswerIndex];
-      result.push(answer?.text?.trim()?.toLowerCase() || "");
-    });
+      correctAnswers[questionNumber] =
+        answer?.text?.trim()?.toLowerCase() || "";
 
-    return result;
+      questionNumber++;
+    });
   }
+
+  // Checkbox Group
+  else if (type === "checkbox-group") {
+    groups.forEach((group) => {
+      let answer = "";
+
+      group.correctAnswersIndex?.map((index) => {
+        answer +=
+          (group.answers[index]?.text?.trim()?.toLowerCase() || "") + " ";
+      });
+
+      const answerKey = `${questionNumber}-${
+        questionNumber + group.maxSelected - 1
+      }`;
+      correctAnswers[answerKey] = answer.trim();
+
+      questionNumber += group.maxSelected;
+    });
+  }
+
+  return { answers: correctAnswers, totalAnswers: questionsCount };
 };
 
 const getTestAnswers = async (testId) => {
@@ -61,11 +83,11 @@ const getTestAnswers = async (testId) => {
         if (!part.sections?.length) return;
 
         part.sections.forEach((section) => {
-          const sectionAnswers = extractSectionAnswers(section);
-          sectionAnswers.forEach((answer) => {
-            answers[module][questionNumber] = answer;
-            questionNumber++;
-          });
+          const { answers: sectionAnswers, totalAnswers } =
+            extractSectionAnswers(section, questionNumber);
+
+          questionNumber += totalAnswers;
+          answers[module] = { ...answers[module], ...sectionAnswers };
         });
       });
     });

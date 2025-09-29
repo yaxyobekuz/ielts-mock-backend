@@ -11,8 +11,14 @@ const Answer = new mongoose.Schema({ text: { type: String } });
 
 const Group = new mongoose.Schema({
   answers: [Answer],
-  question: { type: String, required: true },
-  correctAnswerIndex: { type: Number, required: true },
+  question: { type: String },
+
+  // Checkbox group
+  maxSelected: { type: Number },
+  correctAnswersIndex: [{ type: Number }],
+
+  // Radio group
+  correctAnswerIndex: { type: Number },
 });
 
 const Option = new mongoose.Schema({
@@ -31,7 +37,13 @@ const Section = new mongoose.Schema(
     type: {
       type: String,
       required: true,
-      enum: ["text", "text-draggable", "flowchart", "radio-group"],
+      enum: [
+        "text",
+        "flowchart",
+        "radio-group",
+        "checkbox-group",
+        "text-draggable",
+      ],
     },
 
     // text & text-draggable

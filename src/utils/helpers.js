@@ -49,6 +49,12 @@ const countSectionQuestions = ({ type, text, items, groups }) => {
     return groups?.length || 0;
   }
 
+  if (type === "checkbox-group") {
+    let count = 0;
+    groups?.forEach((group) => (count += group.maxSelected));
+    return count || 0;
+  }
+
   return 0;
 };
 

@@ -1,5 +1,9 @@
 const delay = (ms = 1000) => new Promise((res) => setTimeout(res, ms));
 
+const extractNumbers = (text = "") => {
+  return text?.replace(/\D/g, "");
+};
+
 const getRandomNumber = (min = 0, max = 1) => {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 };
@@ -81,6 +85,7 @@ const shuffleArray = (arr = []) => {
 module.exports = {
   delay,
   shuffleArray,
+  extractNumbers,
   getRandomNumber,
   pickAllowedFields,
   countExactMatches,

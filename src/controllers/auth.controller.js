@@ -22,7 +22,7 @@ const sentVerificationCode = async (chatId, code) => {
 const register = async (req, res, next) => {
   const phone = Number(req.body.phone);
   const { firstName, lastName, password } = req.body;
-  const role = req?.params?.role?.toLowerCase() || "student";
+  const role = req?.query?.role?.toLowerCase() || "student";
 
   const allowedRoles = ["student", "supervisor"];
 

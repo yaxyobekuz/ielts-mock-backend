@@ -9,11 +9,11 @@ const { upload } = require("../utils/multer.js");
 
 // Controllers
 const {
-  uploadPhoto,
-  uploadPhotos,
+  uploadImage,
+  uploadImages,
 } = require("../controllers/upload.controller.js");
 
-router.post("/photo", auth, upload.single("photo"), uploadPhoto);
-router.post("/photos", auth, upload.array("photos", 20), uploadPhotos);
+router.post("/image", auth, upload.single("image"), uploadImage);
+router.post("/images", auth, upload.array("images", 20), uploadImages);
 
 module.exports = router;

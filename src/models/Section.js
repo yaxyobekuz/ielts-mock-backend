@@ -32,8 +32,8 @@ const Section = new mongoose.Schema(
     title: { type: String, required: true },
     module: { type: String, required: true },
     partId: { type: String, required: true },
-    testId: { type: String, required: true },
     questionsCount: { type: Number, default: 0, required: true },
+    testId: { type: mongoose.Schema.Types.ObjectId, required: true },
     type: {
       type: String,
       required: true,

@@ -5,8 +5,12 @@ const express = require("express");
 require("../models/Part");
 require("../models/User");
 require("../models/Test");
+require("../models/Link");
+require("../models/Image");
 require("../models/Result");
 require("../models/Section");
+require("../models/Template");
+require("../models/Submission");
 require("../models/VerificationCode");
 
 const app = express();

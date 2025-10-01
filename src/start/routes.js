@@ -9,6 +9,7 @@ const resultRoute = require("../routes/result");
 const uploadRoute = require("../routes/upload");
 const sectionsRoute = require("../routes/sections");
 const teachersRoute = require("../routes/teachers");
+const templatesRoute = require("../routes/templates");
 const submissionRoute = require("../routes/submission");
 
 // Handlers
@@ -23,6 +24,7 @@ app.use("/api/upload", uploadRoute);
 app.use("/api/results", resultRoute);
 app.use("/api/teachers", teachersRoute);
 app.use("/api/sections", sectionsRoute);
+app.use("/api/templates", templatesRoute);
 app.use("/api/submissions", submissionRoute);
 
 app.use(errorHandler);

@@ -3,6 +3,7 @@ const router = express.Router();
 
 // Controllers
 const {
+  useTemplate,
   getTemplates,
   createTemplate,
   updateTemplate,
@@ -25,6 +26,7 @@ router.get(
   roleCheck(["supervisor", "teacher", "admin", "owner"]),
   getTemplateById
 );
+router.post("/:id/use", auth, roleCheck(["teacher"]), useTemplate);
 router.post("/", auth, roleCheck(["admin", "owner"]), createTemplate);
 router.put("/:id", auth, roleCheck(["admin", "owner"]), updateTemplate);
 router.delete("/:id", auth, roleCheck(["admin", "owner"]), deleteTemplate);

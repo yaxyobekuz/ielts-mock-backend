@@ -1,5 +1,7 @@
 // Models
 const Part = require("../models/Part");
+const Test = require("../models/Test");
+const Section = require("../models/Section");
 const Template = require("../models/Template");
 
 // Create template
@@ -191,7 +193,131 @@ const deleteTemplate = async (req, res, next) => {
   }
 };
 
+// Use template
+const useTemplate = async (req, res, next) => {
+  const { id } = req.params;
+  const { title, image = "" } = req.body;
+  const { _id: createdBy, supervisor } = req.user;
+
+  if (!title || !title.trim().length) {
+    return res.status(400).json({
+      code: "invalidProperty",
+      message: "Test sarlavhasi talab qilinadi",
+    });
+  }
+
+  try {
+    // Template
+    const template = await Template.findById(id);
+    if (!template) {
+      return res.status(404).json({
+        code: "templateNotFound",
+        message: "Shablon topilmadi",
+      });
+    }
+
+    // Test
+    const originalTest = await Test.findById(template.test)
+      .populate({
+        populate: { path: "sections", model: "Section" },
+        path: "listening.parts reading.parts writing.parts",
+      })
+      .lean();
+    if (!originalTest) {
+      return res.status(404).json({
+        code: "testNotFound",
+        message: "Test topilmadi",
+      });
+    }
+
+    // Create a new test
+    const newTest = new Test({
+      title,
+      createdBy,
+      supervisor,
+      image: image || originalTest.image,
+      totalParts: originalTest.totalParts,
+      description: originalTest.description,
+      writing: { partsCount: 0, parts: [] },
+      reading: { partsCount: 0, parts: [] },
+      listening: { partsCount: 0, parts: [] },
+    });
+
+    // Helper functions
+    const cloneSections = async (sections) => {
+      const newSections = [];
+
+      for (const section of sections) {
+        const sectionObj = { ...section };
+
+        delete sectionObj._id;
+        delete sectionObj.createdAt;
+        delete sectionObj.updatedAt;
+
+        sectionObj.testId = newTest._id;
+        sectionObj.createdBy = createdBy;
+        sectionObj.supervisor = supervisor;
+
+        const newSection = await Section.create(sectionObj);
+        newSections.push(newSection._id);
+      }
+
+      return newSections;
+    };
+
+    const cloneParts = async (parts) => {
+      const newParts = [];
+
+      for (const part of parts) {
+        const partObj = { ...part };
+        const sections = await cloneSections(partObj.sections);
+
+        delete partObj._id;
+        delete partObj.createdAt;
+        delete partObj.updatedAt;
+
+        partObj.sections = sections;
+        partObj.testId = newTest._id;
+        partObj.createdBy = createdBy;
+        partObj.supervisor = supervisor;
+
+        const newPart = await Part.create(partObj);
+        newParts.push(newPart._id);
+      }
+
+      return newParts;
+    };
+
+    // Clone parts
+    const readingParts = await cloneParts(originalTest.reading.parts);
+    const writingParts = await cloneParts(originalTest.writing.parts);
+    const listeningParts = await cloneParts(originalTest.listening.parts);
+
+    // Assign parts
+    newTest.reading.parts = readingParts;
+    newTest.reading.partsCount = readingParts.length;
+
+    newTest.writing.parts = writingParts;
+    newTest.writing.partsCount = writingParts.length;
+
+    newTest.listening.parts = listeningParts;
+    newTest.listening.partsCount = listeningParts.length;
+
+    // Save test
+    const savedTest = await newTest.save();
+
+    res.status(201).json({
+      test: savedTest,
+      code: "templateUsed",
+      message: "Yangi test shablondan nusxa olindi",
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
+  useTemplate,
   getTemplates,
   createTemplate,
   updateTemplate,

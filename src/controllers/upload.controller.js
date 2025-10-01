@@ -1,24 +1,25 @@
 const { uploadFile, uploadFiles } = require("../services/uploadService");
 
-const uploadPhoto = async (req, res, next) => {
+const uploadImage = async (req, res, next) => {
+  const userId = req.user._id;
+
   try {
-    const fileUrl = await uploadFile(req.file);
-    res.json({ success: true, url: fileUrl });
+    const image = await uploadFile(req.file, userId);
+    res.json({ code: "imageUploaded", image });
   } catch (err) {
     next(err);
   }
 };
 
-const uploadPhotos = async (req, res, next) => {
+const uploadImages = async (req, res, next) => {
+  const userId = req.user._id;
+
   try {
-    const urls = await uploadFiles(req.files);
-    res.json({ success: true, urls });
+    const images = await uploadFiles(req.files, userId);
+    res.json({ code: "imagesUploaded", images });
   } catch (err) {
     next(err);
   }
 };
 
-module.exports = {
-  uploadPhoto,
-  uploadPhotos,
-};
+module.exports = { uploadImage, uploadImages };

@@ -26,7 +26,9 @@ const countExactMatches = (text, target) => {
   );
 };
 
-const countSectionQuestions = ({ type, text, items, groups }) => {
+const getLetterByIndex = (index) => String.fromCharCode(65 + index);
+
+const countSectionQuestions = ({ type, text, items, groups, grid }) => {
   const dropzone = `<span data-name="dropzone"></span>`;
   const input = `<input type="text" data-name="answer-input">`;
 
@@ -59,6 +61,10 @@ const countSectionQuestions = ({ type, text, items, groups }) => {
     return count || 0;
   }
 
+  if (type === "grid-matching") {
+    return grid?.questions?.length || 0;
+  }
+
   return 0;
 };
 
@@ -87,6 +93,7 @@ module.exports = {
   shuffleArray,
   extractNumbers,
   getRandomNumber,
+  getLetterByIndex,
   pickAllowedFields,
   countExactMatches,
   roundToNearestHalf,

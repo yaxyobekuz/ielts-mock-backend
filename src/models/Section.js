@@ -41,6 +41,7 @@ const Section = new mongoose.Schema(
         "text",
         "flowchart",
         "radio-group",
+        "grid-matching",
         "checkbox-group",
         "text-draggable",
       ],
@@ -61,6 +62,17 @@ const Section = new mongoose.Schema(
 
     // Dropzone & Input coords
     coords: { type: mongoose.Schema.Types.Mixed, default: {} },
+
+    // Grid matching
+    grid: {
+      answerColumns: Number,
+      questions: [
+        {
+          text: { type: String, required: true },
+          correctAnswerIndex: { type: Number, required: true },
+        },
+      ],
+    },
 
     createdBy: {
       ref: "User",

@@ -1,7 +1,8 @@
 const Test = require("../models/Test");
+const { getLetterByIndex } = require("./helpers");
 
 const extractSectionAnswers = (
-  { type, groups, answers, options, questionsCount },
+  { type, groups, answers, options, questionsCount, grid },
   initialQuestionNumber
 ) => {
   let correctAnswers = {};
@@ -53,6 +54,15 @@ const extractSectionAnswers = (
       correctAnswers[answerKey] = answers;
 
       questionNumber += group.maxSelected;
+    });
+  }
+
+  // Grid Matching
+  else if (type === "grid-matching") {
+    grid.questions.forEach(({ correctAnswerIndex }) => {
+      const answer = getLetterByIndex(correctAnswerIndex);
+      correctAnswers[questionNumber] = answer;
+      questionNumber++;
     });
   }
 

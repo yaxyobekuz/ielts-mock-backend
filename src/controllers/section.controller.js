@@ -78,6 +78,7 @@ const updateSection = async (req, res, next) => {
   const createdBy = req.user.id;
 
   const allowedFields = [
+    "grid",
     "text",
     "title",
     "items",

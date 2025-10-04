@@ -1,6 +1,7 @@
 // Models
 const Part = require("../models/Part");
 const Test = require("../models/Test");
+const { pickAllowedFields } = require("../utils/helpers");
 
 // Create test
 const createTest = async (req, res, next) => {
@@ -188,6 +189,48 @@ const updateTest = async (req, res, next) => {
   }
 };
 
+// Update module
+const updateModule = async (req, res, next) => {
+  const createdBy = req.user.id;
+  const { id, module } = req.params;
+  const allowedFields = ["audios", "duration"];
+  const allowedModules = ["listening", "reading", "writing"];
+
+  // Check module type
+  if (!allowedModules.includes(module)) {
+    return res.status(400).json({
+      code: "invalidModule",
+      message: "Modul noto'g'ri kiritildi",
+    });
+  }
+
+  try {
+    const updates = pickAllowedFields(req.body, allowedFields);
+
+    // Test
+    const test = await Test.findOne({ _id: id, createdBy });
+    if (!test) {
+      return res.status(404).json({
+        code: "testNotFound",
+        message: "Test topilmadi",
+      });
+    }
+
+    // Update module
+    test[module] = { ...test[module], ...updates };
+    await test.save();
+
+    res.json({
+      module,
+      updates,
+      code: "moduleUpdated",
+      message: "Modul muvaffaqiyatli yangilandi",
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 // Delete test
 const deleteTest = async (req, res, next) => {
   const { id } = req.params;
@@ -218,5 +261,6 @@ module.exports = {
   updateTest,
   deleteTest,
   getTestById,
+  updateModule,
   getLatestTests,
 };

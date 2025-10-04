@@ -8,6 +8,7 @@ const {
   updateTest,
   deleteTest,
   getTestById,
+  updateModule,
   getLatestTests,
 } = require("../controllers/tests.controller");
 
@@ -19,6 +20,7 @@ router.post("/", auth, createTest);
 router.put("/:id", auth, updateTest);
 router.delete("/:id", auth, deleteTest);
 router.get("/latest", auth, getLatestTests);
+router.put("/:id/:module", auth, updateModule);
 router.get("/:id", auth, getTestById);
 
 module.exports = router;

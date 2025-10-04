@@ -6,23 +6,32 @@ const Test = new mongoose.Schema(
     description: { type: String },
     title: { type: String, required: true },
     totalParts: { type: Number, required: true, default: 0 },
+
     reading: {
+      duration: { type: Number, default: 60 },
       partsCount: { type: Number, required: true, default: 0 },
       parts: [{ ref: "Part", type: mongoose.Schema.Types.ObjectId }],
     },
+
     writing: {
+      duration: { type: Number, default: 60 },
       partsCount: { type: Number, required: true, default: 0 },
       parts: [{ ref: "Part", type: mongoose.Schema.Types.ObjectId }],
     },
+
     listening: {
+      duration: { type: Number, default: 60 },
       partsCount: { type: Number, required: true, default: 0 },
       parts: [{ ref: "Part", type: mongoose.Schema.Types.ObjectId }],
+      audios: [{ ref: "Audio", type: mongoose.Schema.Types.ObjectId }],
     },
+
     supervisor: {
       ref: "User",
       required: true,
       type: mongoose.Schema.Types.ObjectId,
     },
+
     createdBy: {
       ref: "User",
       required: true,

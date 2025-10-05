@@ -217,12 +217,10 @@ const useTemplate = async (req, res, next) => {
     }
 
     // Test
-    const originalTest = await Test.findById(template.test)
-      .populate({
-        populate: { path: "sections", model: "Section" },
-        path: "listening.parts reading.parts writing.parts",
-      })
-      .lean();
+    const originalTest = await Test.findById(template.test).populate({
+      path: "reading.parts writing.parts listening.parts",
+      populate: { path: "sections", model: "Section" },
+    });
     if (!originalTest) {
       return res.status(404).json({
         code: "testNotFound",
@@ -230,11 +228,13 @@ const useTemplate = async (req, res, next) => {
       });
     }
 
-    // Create a new test
+    // New test
     const newTest = new Test({
       title,
       createdBy,
       supervisor,
+      isCopied: true,
+      originalTest: originalTest._id,
       image: image || originalTest.image,
       totalParts: originalTest.totalParts,
       description: originalTest.description,
@@ -243,55 +243,58 @@ const useTemplate = async (req, res, next) => {
       listening: { partsCount: 0, parts: [] },
     });
 
-    // Helper functions
-    const cloneSections = async (sections) => {
-      const newSections = [];
+    // Clone helpers
+    const cloneSections = async (sections = []) => {
+      const newSections = await Promise.all(
+        sections.map(async (section) => {
+          if (!section) return null;
+          const sectionObj = { ...section.toObject() };
+          delete sectionObj._id;
+          delete sectionObj.createdAt;
+          delete sectionObj.updatedAt;
 
-      for (const section of sections) {
-        const sectionObj = { ...section };
+          sectionObj.testId = newTest._id;
+          sectionObj.createdBy = createdBy;
+          sectionObj.supervisor = supervisor;
 
-        delete sectionObj._id;
-        delete sectionObj.createdAt;
-        delete sectionObj.updatedAt;
+          const newSection = await Section.create(sectionObj);
+          return newSection._id;
+        })
+      );
 
-        sectionObj.testId = newTest._id;
-        sectionObj.createdBy = createdBy;
-        sectionObj.supervisor = supervisor;
-
-        const newSection = await Section.create(sectionObj);
-        newSections.push(newSection._id);
-      }
-
-      return newSections;
+      return newSections.filter(Boolean);
     };
 
-    const cloneParts = async (parts) => {
-      const newParts = [];
+    const cloneParts = async (parts = []) => {
+      const newParts = await Promise.all(
+        parts.map(async (part) => {
+          if (!part) return null;
+          const partObj = { ...part.toObject() };
+          const sections = await cloneSections(partObj.sections);
 
-      for (const part of parts) {
-        const partObj = { ...part };
-        const sections = await cloneSections(partObj.sections);
+          delete partObj._id;
+          delete partObj.createdAt;
+          delete partObj.updatedAt;
 
-        delete partObj._id;
-        delete partObj.createdAt;
-        delete partObj.updatedAt;
+          partObj.sections = sections;
+          partObj.testId = newTest._id;
+          partObj.createdBy = createdBy;
+          partObj.supervisor = supervisor;
 
-        partObj.sections = sections;
-        partObj.testId = newTest._id;
-        partObj.createdBy = createdBy;
-        partObj.supervisor = supervisor;
+          const newPart = await Part.create(partObj);
+          return newPart._id;
+        })
+      );
 
-        const newPart = await Part.create(partObj);
-        newParts.push(newPart._id);
-      }
-
-      return newParts;
+      return newParts.filter(Boolean);
     };
 
-    // Clone parts
-    const readingParts = await cloneParts(originalTest.reading.parts);
-    const writingParts = await cloneParts(originalTest.writing.parts);
-    const listeningParts = await cloneParts(originalTest.listening.parts);
+    // Clone all parts
+    const [readingParts, writingParts, listeningParts] = await Promise.all([
+      cloneParts(originalTest.reading.parts),
+      cloneParts(originalTest.writing.parts),
+      cloneParts(originalTest.listening.parts),
+    ]);
 
     // Assign parts
     newTest.reading.parts = readingParts;
@@ -303,8 +306,10 @@ const useTemplate = async (req, res, next) => {
     newTest.listening.parts = listeningParts;
     newTest.listening.partsCount = listeningParts.length;
 
-    // Save test
+    // Save
     const savedTest = await newTest.save();
+    originalTest.copyCount = (originalTest.copyCount || 0) + 1;
+    await originalTest.save();
 
     res.status(201).json({
       test: savedTest,

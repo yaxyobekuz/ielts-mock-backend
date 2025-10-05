@@ -8,20 +8,20 @@ const Test = new mongoose.Schema(
     totalParts: { type: Number, required: true, default: 0 },
 
     reading: {
-      duration: { type: Number, default: 60 },
       partsCount: { type: Number, required: true, default: 0 },
+      duration: { type: Number, default: 60, min: 5, max: 180 },
       parts: [{ ref: "Part", type: mongoose.Schema.Types.ObjectId }],
     },
 
     writing: {
-      duration: { type: Number, default: 60 },
       partsCount: { type: Number, required: true, default: 0 },
+      duration: { type: Number, default: 60, min: 5, max: 180 },
       parts: [{ ref: "Part", type: mongoose.Schema.Types.ObjectId }],
     },
 
     listening: {
-      duration: { type: Number, default: 60 },
       partsCount: { type: Number, required: true, default: 0 },
+      duration: { type: Number, default: 60, min: 5, max: 180 },
       parts: [{ ref: "Part", type: mongoose.Schema.Types.ObjectId }],
       audios: [{ ref: "Audio", type: mongoose.Schema.Types.ObjectId }],
     },
@@ -37,6 +37,10 @@ const Test = new mongoose.Schema(
       required: true,
       type: mongoose.Schema.Types.ObjectId,
     },
+
+    copyCount: { type: Number, default: 0 },
+    isCopied: { type: Boolean, default: false },
+    originalTest: { ref: "Test", type: mongoose.Schema.Types.ObjectId },
   },
   { timestamps: true }
 );

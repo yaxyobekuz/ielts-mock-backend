@@ -6,6 +6,7 @@ const s3 = require("../config/s3");
 
 // Models
 const Image = require("../models/Image");
+const Audio = require("../models/Audio");
 
 // Aws
 const { PutObjectCommand } = require("@aws-sdk/client-s3");
@@ -89,7 +90,32 @@ const uploadFiles = async (files, userId, folder = "images") => {
   return Promise.all(files.map((file) => uploadFile(file, userId, folder)));
 };
 
+const uploadAudio = async (file, userId, folder = "audios") => {
+  const audioUrl = await uploadBuffer(
+    folder,
+    file.buffer,
+    file.mimetype,
+    file.originalname
+  );
+
+  const audio = await Audio.create({
+    url: audioUrl,
+    size: file.size,
+    createdBy: userId,
+    mimetype: file.mimetype,
+    name: file.originalname,
+  });
+
+  return audio;
+};
+
+const uploadAudios = async (files, userId, folder = "audios") => {
+  return Promise.all(files.map((file) => uploadAudio(file, userId, folder)));
+};
+
 module.exports = {
   uploadFile,
   uploadFiles,
+  uploadAudio,
+  uploadAudios,
 };

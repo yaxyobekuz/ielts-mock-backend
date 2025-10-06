@@ -5,7 +5,15 @@ const Test = new mongoose.Schema(
     image: { type: String },
     description: { type: String },
     title: { type: String, required: true },
+
+    copyCount: { type: Number, default: 0 },
+    isCopied: { type: Boolean, default: false },
+
+    deletedAt: { type: Date, default: null },
+    isDeleted: { type: Boolean, default: false },
+
     totalParts: { type: Number, required: true, default: 0 },
+    originalTest: { ref: "Test", type: mongoose.Schema.Types.ObjectId },
 
     reading: {
       partsCount: { type: Number, required: true, default: 0 },
@@ -37,10 +45,6 @@ const Test = new mongoose.Schema(
       required: true,
       type: mongoose.Schema.Types.ObjectId,
     },
-
-    copyCount: { type: Number, default: 0 },
-    isCopied: { type: Boolean, default: false },
-    originalTest: { ref: "Test", type: mongoose.Schema.Types.ObjectId },
   },
   { timestamps: true }
 );

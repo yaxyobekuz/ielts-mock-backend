@@ -13,11 +13,9 @@ const prepareTestForUser = async (testId) => {
     const test = await Test.findById(testId)
       .populate({
         path: "reading.parts writing.parts listening.parts",
-        populate: {
-          path: "sections",
-          model: "Section",
-        },
+        populate: { path: "sections", model: "Section" },
       })
+      .populate("listening.audios")
       .lean();
 
     if (!test) return null;

@@ -109,7 +109,7 @@ const verify = async (req, res, next) => {
   try {
     const code = Number(req.body.code);
     const phone = Number(req.body.phone);
-    const { passwrod, firstName, lastName } = req.body;
+    const { password } = req.body;
 
     // Get latest sent code
     const verificationCode = await VerificationCode.findOne({ phone, code });
@@ -141,7 +141,7 @@ const verify = async (req, res, next) => {
     // If valid, verify user
     const user = await User.findOneAndUpdate(
       { phone },
-      { isVerified: true, passwrod, firstName, lastName },
+      { isVerified: true, password },
       { new: true }
     ).select("-password");
 
@@ -173,9 +173,17 @@ const login = async (req, res, next) => {
     }
 
     if (!user.isVerified) {
-      return res.status(403).json({
+      const code = getRandomNumber(1000, 9999);
+      const isSent = await sentVerificationCode(user.chatId, code);
+      await VerificationCode.create({
+        code,
+        phone,
+        isSent,
+      });
+
+      return res.status(400).json({
         code: "accountNotVerified",
-        message: "Hisob tasdiqlanmagan",
+        message: "Hisob tasdiqlanmagan, kod qayta yuborildi",
       });
     }
 

@@ -26,9 +26,9 @@ services:
     ports:
       - "27017:27017"
     environment:
-      - MONGO_INITDB_ROOT_USERNAME=${MONGO_ROOT_USERNAME}
-      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_ROOT_PASSWORD}
-      - MONGO_INITDB_DATABASE=${MONGO_DB_NAME}
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_INITDB_ROOT_USERNAME}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD}
+      - MONGO_INITDB_DATABASE=${MONGO_INITDB_DATABASE}
     volumes:
       - ielts_mongo_data:/data/db
       - ./mongo-init:/docker-entrypoint-initdb.d:ro
@@ -48,7 +48,7 @@ services:
     networks:
       - ielts-network
 
-  # Nginx reverse proxy service
+  # Nginx reverse
   nginx:
     image: nginx:alpine
     container_name: ielts-nginx

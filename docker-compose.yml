@@ -7,7 +7,7 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=4000
-      - MONGO_URI=${MONGO_URL}
+      - MONGO_URI=${MONGODB_URL}
     env_file:
       - .env
     depends_on:

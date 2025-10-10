@@ -6,13 +6,13 @@ const Submission = require("../models/Submission");
 // Helpers
 const { getTestAnswers } = require("../utils/test");
 
-// Yangi submission yaratish
+// Create a new submission
 const createSubmission = async (req, res, next) => {
   const userId = req.user._id;
   const { linkId, answers } = req.body;
 
   try {
-    // Link
+  // Find link by ID
     const link = await Link.findById(linkId);
     if (!link) {
       return res.status(404).json({
@@ -21,7 +21,7 @@ const createSubmission = async (req, res, next) => {
       });
     }
 
-    // Test
+  // Find test by ID
     const test = await Test.findById(link.testId);
     if (!test) {
       return res.status(404).json({
@@ -49,22 +49,29 @@ const createSubmission = async (req, res, next) => {
   }
 };
 
-// Barcha submissionlarni olish
+// Get all submissions
 const getSubmissions = async (req, res, next) => {
   let filter = {};
   const { _id: userId, role: userRole } = req.user;
+  const populateTest = req.query.populateTest === "true";
+  let populate = {
+    path: "student",
+    select: "-phone -password -chatId -balance",
+  };
 
-  // Filter
+  if (populateTest) {
+    populate.path = "test";
+    populate.select = "title description";
+  }
+
+  // Filter by user role
   if (userRole === "teacher") filter.teacher = userId;
   else if (userRole === "student") filter.student = userId;
   else if (userRole === "supervisor") filter.supervisor = userId;
 
   try {
     const submissions = await Submission.find(filter)
-      .populate({
-        path: "student",
-        select: "-phone -password -chatId -balance",
-      })
+      .populate(populate)
       .select("-answers");
 
     res.json({ code: "submissionsFetched", submissions });
@@ -73,21 +80,23 @@ const getSubmissions = async (req, res, next) => {
   }
 };
 
-// ID bo‘yicha submission olish
+// Get submission by ID
 const getSubmissionById = async (req, res, next) => {
   let filter = { _id: req.params.id };
   const { _id: userId, role: userRole } = req.user;
 
-  // Filter
+  // Filter by user role
   if (userRole === "teacher") filter.teacher = userId;
   else if (userRole === "student") filter.student = userId;
   else if (userRole === "supervisor") filter.supervisor = userId;
 
   try {
-    const submission = await Submission.findOne(filter).populate({
-      path: "test student teacher",
-      select: "-phone -password -chatId -balance",
-    });
+    const submission = await Submission.findOne(filter)
+      .populate({
+        path: "student teacher",
+        select: "-phone -password -chatId -balance",
+      })
+      .populate({ path: "test", select: "title description" });
 
     if (!submission) {
       return res.status(404).json({
@@ -112,12 +121,12 @@ const getSubmissionById = async (req, res, next) => {
   }
 };
 
-// Submission yangilash (masalan, foydalanuvchi javob qo‘shsa yoki testni tugatsa)
+// Update submission (e.g. when user adds answers or finishes test)
 const updateSubmission = async (req, res, next) => {
   try {
     const data = req.body;
 
-    // Agar test tugasa finishedAt qo‘shiladi
+  // Add finishedAt if test is finished
     if (data.isFinished) {
       data.finishedAt = new Date();
     }
@@ -134,7 +143,7 @@ const updateSubmission = async (req, res, next) => {
   }
 };
 
-// Submission o‘chirish
+// Delete submission
 const deleteSubmission = async (req, res, next) => {
   try {
     const submission = await Submission.findByIdAndDelete(req.params.id);

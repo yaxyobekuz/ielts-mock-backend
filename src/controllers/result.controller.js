@@ -107,6 +107,17 @@ const createResult = async (req, res, next) => {
 const getResults = async (req, res, next) => {
   let filter = {};
   const { _id: userId, role: userRole } = req.user;
+  const populateTest = req.query.populateTest === "true";
+
+  let populate = {
+    path: "student",
+    select: "-phone -password -chatId -balance",
+  };
+
+  if (populateTest) {
+    populate.path = "test";
+    populate.select = "title description";
+  }
 
   // Filter
   if (userRole === "teacher") filter.teacher = userId;
@@ -115,8 +126,8 @@ const getResults = async (req, res, next) => {
 
   try {
     const results = await Result.find(filter)
-      .select("-teacher -supervisor -createdBy")
-      .populate("student");
+      .populate(populate)
+      .select("-teacher -supervisor -createdBy -__v");
 
     res.json({ code: "resultsFetched", results });
   } catch (err) {
@@ -128,6 +139,17 @@ const getResults = async (req, res, next) => {
 const getResultById = async (req, res, next) => {
   let filter = { _id: req.params.id };
   const { _id: userId, role: userRole } = req.user;
+  const populateTest = req.query.populateTest === "true";
+
+  let populate = {
+    path: "student",
+    select: "-phone -password -chatId -balance",
+  };
+
+  if (populateTest) {
+    populate.path = "test";
+    populate.select = "title description";
+  }
 
   // Filter
   if (userRole === "teacher") filter.teacher = userId;
@@ -136,10 +158,7 @@ const getResultById = async (req, res, next) => {
 
   try {
     const result = await Result.findOne(filter)
-      .populate({
-        path: "submission student",
-        select: `-answers -password -balance -chatId -createdAt -__v -updatedAt`,
-      })
+      .populate(populate)
       .select("-teacher -supervisor -createdBy -__v");
 
     if (!result) {

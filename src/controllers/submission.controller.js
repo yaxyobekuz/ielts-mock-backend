@@ -12,7 +12,7 @@ const createSubmission = async (req, res, next) => {
   const { linkId, answers } = req.body;
 
   try {
-  // Find link by ID
+    // Find link by ID
     const link = await Link.findById(linkId);
     if (!link) {
       return res.status(404).json({
@@ -21,7 +21,7 @@ const createSubmission = async (req, res, next) => {
       });
     }
 
-  // Find test by ID
+    // Find test by ID
     const test = await Test.findById(link.testId);
     if (!test) {
       return res.status(404).json({
@@ -126,7 +126,7 @@ const updateSubmission = async (req, res, next) => {
   try {
     const data = req.body;
 
-  // Add finishedAt if test is finished
+    // Add finishedAt if test is finished
     if (data.isFinished) {
       data.finishedAt = new Date();
     }

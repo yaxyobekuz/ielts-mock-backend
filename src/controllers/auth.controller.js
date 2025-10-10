@@ -211,7 +211,10 @@ const login = async (req, res, next) => {
 // Get profile
 const profile = async (req, res, next) => {
   try {
-    const user = await User.findById(req.user.id).select("-password");
+    const user = await User.findById(req.user.id)
+      .populate("avatar")
+      .select("-password");
+
     res.json({
       user,
       code: "profileSuccess",

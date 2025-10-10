@@ -6,6 +6,7 @@ const testsRoute = require("../routes/tests");
 const partsRoute = require("../routes/parts");
 const linksRoute = require("../routes/links");
 const statsRoute = require("../routes/stats");
+const usersRoute = require("../routes/users");
 const resultRoute = require("../routes/result");
 const uploadRoute = require("../routes/upload");
 const sectionsRoute = require("../routes/sections");
@@ -18,6 +19,7 @@ const errorHandler = require("../middlewares/errorHandler");
 
 app.use(express.json());
 app.use("/api/auth", authRoute);
+app.use("/api/users", usersRoute);
 app.use("/api/tests", testsRoute);
 app.use("/api/parts", partsRoute);
 app.use("/api/links", linksRoute);

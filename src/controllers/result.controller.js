@@ -111,7 +111,8 @@ const getResults = async (req, res, next) => {
 
   let populate = {
     path: "student",
-    select: "-phone -password -chatId -balance",
+    populate: "avatar",
+    select: "firstName lastName avatar role",
   };
 
   if (populateTest) {
@@ -143,7 +144,8 @@ const getResultById = async (req, res, next) => {
 
   let populate = {
     path: "student",
-    select: "-phone -password -chatId -balance",
+    populate: "avatar",
+    select: "firstName lastName avatar role",
   };
 
   if (populateTest) {

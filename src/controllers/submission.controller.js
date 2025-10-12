@@ -56,7 +56,8 @@ const getSubmissions = async (req, res, next) => {
   const populateTest = req.query.populateTest === "true";
   let populate = {
     path: "student",
-    select: "-phone -password -chatId -balance",
+    populate: "avatar",
+    select: "firstName lastName avatar role",
   };
 
   if (populateTest) {

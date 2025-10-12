@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 
 const User = new mongoose.Schema(
   {
+    bio: { type: String },
     chatId: { type: Number },
     lastName: { type: String },
     balance: { type: Number, default: 0 },

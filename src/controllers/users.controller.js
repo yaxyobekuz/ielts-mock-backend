@@ -51,7 +51,11 @@ const updateUserAvatar = async (req, res, next) => {
 // Get user
 const updateUser = async (req, res, next) => {
   const userId = req.user._id;
-  const updatedFields = pickAllowedFields(req.body, ["firstName", "lastName"]);
+  const updatedFields = pickAllowedFields(req.body, [
+    "bio",
+    "lastName",
+    "firstName",
+  ]);
 
   try {
     const user = await User.findByIdAndUpdate(userId, updatedFields, {

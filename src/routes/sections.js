@@ -1,9 +1,6 @@
 const express = require("express");
 const router = express.Router();
 
-// Middlewares
-const { auth } = require("../middlewares/auth");
-
 // Controllers
 const {
   getSections,
@@ -13,12 +10,14 @@ const {
   getSectionById,
 } = require("../controllers/section.controller");
 
+// Middlewares
+const { auth, roleCheck } = require("../middlewares/auth");
+const notStudent = roleCheck(["teacher", "supervisor", "admin", "owner"]);
 
-
-router.get("/", auth, getSections);
-router.post("/", auth, createSection);
-router.put("/:id", auth, updateSection);
-router.get("/:id", auth, getSectionById);
-router.delete("/:id", auth, deleteSection);
+router.get("/", auth, notStudent, getSections);
+router.get("/:id", auth, notStudent, getSectionById);
+router.post("/", auth, roleCheck(["teacher"]), createSection);
+router.put("/:id", auth, roleCheck(["teacher"]), updateSection);
+router.delete("/:id", auth, roleCheck(["teacher"]), deleteSection);
 
 module.exports = router;

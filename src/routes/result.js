@@ -18,8 +18,8 @@ const notStudent = roleCheck(["teacher", "supervisor", "owner", "admin"]);
 router.get("/", auth, getResults);
 router.get("/:id", auth, getResultById);
 
-router.post("/", auth, notStudent, createResult);
-router.put("/:id", auth, notStudent, updateResult);
-router.delete("/:id", auth, notStudent, deleteResult);
+router.post("/", auth, roleCheck(["teacher"]), createResult);
+router.delete("/:id", auth, roleCheck(["teacher"]), deleteResult);
+router.put("/:id", auth, notStudent, roleCheck(["teacher"]), updateResult);
 
 module.exports = router;

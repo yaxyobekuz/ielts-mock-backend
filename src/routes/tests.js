@@ -14,24 +14,52 @@ const {
   deleteAudioFromModule,
 } = require("../controllers/tests.controller");
 
-// Middlewares
-const { auth } = require("../middlewares/auth");
-
 // Multer
 const { upload } = require("../utils/multer.js");
 
-router.get("/", auth, getTests);
-router.post("/", auth, createTest);
-router.put("/:id", auth, updateTest);
-router.delete("/:id", auth, deleteTest);
-router.get("/latest", auth, getLatestTests);
-router.put("/:id/:module/duration", auth, updateModuleDuration);
-router.delete("/:id/:module/audios/:audioId", auth, deleteAudioFromModule);
-router.get("/:id", auth, getTestById);
+// Middlewares
+const { auth, roleCheck } = require("../middlewares/auth");
+const notStudent = roleCheck(["teacher", "supervisor", "admin", "owner"]);
 
+// Get all tests
+router.get("/", auth, notStudent, getTests);
+
+// Delete test
+router.delete("/:id", auth, notStudent, deleteTest);
+
+// Create new test
+router.post("/", auth, roleCheck(["teacher"]), createTest);
+
+// Update test
+router.put("/:id", auth, roleCheck(["teacher"]), updateTest);
+
+// Get latest tests
+router.get("/latest", auth, roleCheck(["supervisor"]), getLatestTests);
+
+// Update module duration
+router.put(
+  "/:id/:module/duration",
+  auth,
+  roleCheck(["teacher"]),
+  updateModuleDuration
+);
+
+// Delete module audio
+router.delete(
+  "/:id/:module/audios/:audioId",
+  auth,
+  roleCheck(["teacher"]),
+  deleteAudioFromModule
+);
+
+// Get test by ID
+router.get("/:id", auth, notStudent, getTestById);
+
+// Add audio to module
 router.post(
   "/:id/:module/audios",
   auth,
+  roleCheck(["teacher"]),
   upload.single("file"),
   addAudioToModule
 );

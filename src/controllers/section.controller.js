@@ -116,19 +116,20 @@ const updateSection = async (req, res, next) => {
 
 // Delete section
 const deleteSection = async (req, res, next) => {
-  try {
-    const { id } = req.params;
+  const { id } = req.params;
 
+  try {
     const deleted = await Section.findByIdAndDelete(id);
     if (!deleted) {
-      return res
-        .status(404)
-        .json({ code: "sectionNotFound", message: "Section not found" });
+      return res.status(404).json({
+        code: "sectionNotFound",
+        message: "Bo'lim topilmadi",
+      });
     }
 
     res.json({
       code: "sectionDeleted",
-      message: "Section deleted successfully",
+      message: "Bo'lim o'chirildi",
     });
   } catch (err) {
     next(err);

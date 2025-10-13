@@ -34,7 +34,12 @@ router.post("/", auth, roleCheck(["teacher"]), createTest);
 router.put("/:id", auth, roleCheck(["teacher"]), updateTest);
 
 // Get latest tests
-router.get("/latest", auth, roleCheck(["supervisor"]), getLatestTests);
+router.get(
+  "/latest",
+  auth,
+  roleCheck(["supervisor", "teacher"]),
+  getLatestTests
+);
 
 // Update module duration
 router.put(

@@ -15,6 +15,10 @@ const Test = new mongoose.Schema(
     totalParts: { type: Number, required: true, default: 0 },
     originalTest: { ref: "Test", type: mongoose.Schema.Types.ObjectId },
 
+    isTemplate: { type: Boolean, default: false },
+    isTemplated: { type: Boolean, default: false },
+    template: { ref: "Template", type: mongoose.Schema.Types.ObjectId },
+
     reading: {
       partsCount: { type: Number, required: true, default: 0 },
       duration: { type: Number, default: 60, min: 5, max: 180 },

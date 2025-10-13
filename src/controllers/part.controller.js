@@ -1,6 +1,7 @@
 // Models
 const Part = require("../models/Part");
 const Test = require("../models/Test");
+const Section = require("../models/Section");
 
 // Helpers
 const { pickAllowedFields } = require("../utils/helpers");
@@ -20,7 +21,7 @@ const createPart = async (req, res, next) => {
       });
     }
 
-    if (!["listening", "reading", "writing"].includes(module)) {
+    if (!["listening", "reading"].includes(module)) {
       return res.status(400).json({
         code: "moduleNotAllowed",
         message: `${module} uchun ruxsat berilmagan`,
@@ -134,19 +135,56 @@ const updatePart = async (req, res, next) => {
 
 // Delete part
 const deletePart = async (req, res, next) => {
-  try {
-    const { id } = req.params;
+  const { id } = req.params;
+  const createdBy = req.user._id;
 
-    const deleted = await Part.findByIdAndDelete(id);
+  try {
+    const deleted = await Part.findOneAndDelete({ _id: id, createdBy });
     if (!deleted) {
-      return res
-        .status(404)
-        .json({ code: "partNotFound", message: "Qism topilmadi" });
+      return res.status(404).json({
+        code: "partNotFound",
+        message: "Qism topilmadi",
+      });
     }
+
+    const updateTestPromise = deleted.testId
+      ? (async () => {
+          const test = await Test.findById(deleted.testId);
+          if (!test) return;
+
+          const module = test[deleted.module];
+          module.parts.pull(deleted._id);
+          module.partsCount -= 1;
+          test.totalParts -= 1;
+          await test.save();
+
+          const parts = await Part.find({
+            testId: deleted.testId,
+            module: deleted.module,
+          }).sort("number");
+
+          await Promise.all(
+            parts.map((part, idx) => {
+              part.number = idx + 1;
+              return part.save();
+            })
+          );
+        })()
+      : null;
+
+    const deleteSectionsPromise = deleted.sections?.length
+      ? Promise.all(
+          deleted.sections.map((sectionId) =>
+            Section.findByIdAndDelete(sectionId)
+          )
+        )
+      : null;
+
+    await Promise.all([updateTestPromise, deleteSectionsPromise]);
 
     res.json({
       code: "partDeleted",
-      message: "Qism muvaffaqiyatli o'chirildi",
+      message: "Qism o'chirildi",
     });
   } catch (err) {
     next(err);

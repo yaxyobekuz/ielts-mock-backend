@@ -1,6 +1,9 @@
 const express = require("express");
 const router = express.Router();
 
+// Multer
+const { upload } = require("../utils/multer.js");
+
 // Controllers
 const {
   useTemplate,
@@ -13,22 +16,23 @@ const {
 
 // Middlewares
 const { auth, roleCheck } = require("../middlewares/auth");
+const notStudent = roleCheck(["supervisor", "teacher", "admin", "owner"]);
 
-router.get(
+router.get("/", auth, notStudent, getTemplates);
+router.put("/:id", auth, notStudent, updateTemplate);
+router.get("/:id", auth, notStudent, getTemplateById);
+router.delete("/:id", auth, notStudent, deleteTemplate);
+router.post("/:id/use", auth, roleCheck(["teacher"]), useTemplate);
+
+router.post(
   "/",
   auth,
-  roleCheck(["supervisor", "teacher", "admin", "owner"]),
-  getTemplates
+  notStudent,
+  upload.fields([
+    { name: "images", maxCount: 10 },
+    { name: "banner", maxCount: 1 },
+  ]),
+  createTemplate
 );
-router.get(
-  "/:id",
-  auth,
-  roleCheck(["supervisor", "teacher", "admin", "owner"]),
-  getTemplateById
-);
-router.post("/:id/use", auth, roleCheck(["teacher"]), useTemplate);
-router.post("/", auth, roleCheck(["admin", "owner"]), createTemplate);
-router.put("/:id", auth, roleCheck(["admin", "owner"]), updateTemplate);
-router.delete("/:id", auth, roleCheck(["admin", "owner"]), deleteTemplate);
 
 module.exports = router;

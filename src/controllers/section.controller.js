@@ -117,9 +117,10 @@ const updateSection = async (req, res, next) => {
 // Delete section
 const deleteSection = async (req, res, next) => {
   const { id } = req.params;
+  const createdBy = req.user._id;
 
   try {
-    const deleted = await Section.findByIdAndDelete(id);
+    const deleted = await Section.findOneAndDelete({ _id: id, createdBy });
     if (!deleted) {
       return res.status(404).json({
         code: "sectionNotFound",

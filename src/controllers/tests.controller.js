@@ -30,26 +30,30 @@ const createTest = async (req, res, next) => {
       supervisor: supervisor || createdBy,
     });
 
-    const getPartData = (module) => ({
+    const getPartData = (module, number = 1) => ({
       module,
-      number: 1,
+      number,
       createdBy,
-      partsCount: 1,
       testId: test._id,
       totalQuestions: 0,
       supervisor: supervisor || createdBy,
     });
 
     // Create parts
-    const writingPart = await Part.create(getPartData("writing"));
+    const writingPart1 = await Part.create(getPartData("writing"));
+    const writingPart2 = await Part.create(getPartData("writing", 2));
+
     const readingPart = await Part.create(getPartData("reading"));
     const listeningPart = await Part.create(getPartData("listening"));
 
     // Save test
-    test.totalParts = 3;
+    test.totalParts = 4;
     test.reading = { partsCount: 1, parts: [readingPart._id] };
-    test.writing = { partsCount: 1, parts: [writingPart._id] };
     test.listening = { partsCount: 1, parts: [listeningPart._id] };
+    test.writing = {
+      partsCount: 2,
+      parts: [writingPart1._id, writingPart2._id],
+    };
     const savedTest = await test.save();
 
     res.status(201).json({
@@ -58,8 +62,8 @@ const createTest = async (req, res, next) => {
       test: {
         ...savedTest.toObject(),
         reading: [readingPart],
-        writing: [writingPart],
         listening: [listeningPart],
+        writing: [writingPart1, writingPart2],
       },
     });
   } catch (err) {

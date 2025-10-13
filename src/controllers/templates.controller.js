@@ -4,58 +4,91 @@ const Test = require("../models/Test");
 const Section = require("../models/Section");
 const Template = require("../models/Template");
 
+// Services
+const { uploadFiles, uploadFile } = require("../services/uploadService");
+
 // Create template
 const createTemplate = async (req, res, next) => {
-  const { _id: createdBy, supervisor } = req.user;
-  const { title, description = "", image = "" } = req.body;
+  const images = req.files.images;
+  const banner = req.files.banner?.[0];
+  const { _id: userId, role: userRole } = req.user;
+  const { title, description, testId, type } = req.body;
 
-  if (!title || !title.trim().length) {
+  const templateType = (() => {
+    if (["supervisor", "teacher"].includes(userRole)) return "teacher";
+    if (["cambridge"].includes(type)) return type;
+    return null;
+  })();
+
+  if (
+    !images?.length ||
+    !title?.trim()?.length ||
+    !description?.trim()?.length
+  ) {
     return res.status(400).json({
       code: "invalidProperty",
-      message: "Template sarlavhasi talab qilinadi",
+      message: "Sarlavha, izoh va kamida bitta rasm talab qilinadi",
+    });
+  }
+
+  if (!templateType) {
+    return res.status(400).json({
+      code: "invalidType",
+      message: "Tur noto'g'ri yoki kiritilmadi",
     });
   }
 
   try {
+    // Test Filter
+    let filter = { _id: testId };
+    if (userRole === "supervisor") filter.supervisor = userId;
+    else if (userRole === "teacher") filter.createdBy = userId;
+
+    // Find Test
+    const test = await Test.findOne(filter);
+    if (!test) {
+      return res.status(404).json({
+        code: "testNotFound",
+        message: "Test topilmadi",
+      });
+    }
+
+    if (test.isTemplate) {
+      return res.status(400).json({
+        code: "testAlreadyTemplate",
+        message: "Test allaqachon shablon sifatida belgilangan",
+      });
+    }
+
+    // Upload images & banner
+    const uploadedImages = await uploadFiles(images, userId);
+    let uploadedBanner = null;
+    if (banner) uploadedBanner = await uploadFile(banner, userId);
+
+    // Create template
     const template = await Template.create({
       title,
-      image,
-      createdBy,
       description,
-      supervisor: supervisor || createdBy,
+      test: testId,
+      createdBy: userId,
+      type: templateType,
+      banner: uploadedBanner,
+      images: uploadedImages.map((img) => img._id),
     });
 
-    const getPartData = (module) => ({
-      module,
-      number: 1,
-      createdBy,
-      partsCount: 1,
-      templateId: template._id,
-      totalQuestions: 0,
-      supervisor: supervisor || createdBy,
-    });
+    // Update test
+    test.isTemplate = true;
+    test.template = template._id;
+    await test.save();
 
-    // Create parts
-    const writingPart = await Part.create(getPartData("writing"));
-    const readingPart = await Part.create(getPartData("reading"));
-    const listeningPart = await Part.create(getPartData("listening"));
-
-    // Save template
-    template.totalParts = 3;
-    template.reading = { partsCount: 1, parts: [readingPart._id] };
-    template.writing = { partsCount: 1, parts: [writingPart._id] };
-    template.listening = { partsCount: 1, parts: [listeningPart._id] };
-    const savedTemplate = await template.save();
+    // Assign images
+    const formattedTemplate = { ...template.toObject() };
+    formattedTemplate.images = uploadedImages;
 
     res.status(201).json({
       code: "templateCreated",
-      message: "Yangi template muvaffaqiyatli yaratildi",
-      template: {
-        ...savedTemplate.toObject(),
-        reading: [readingPart],
-        writing: [writingPart],
-        listening: [listeningPart],
-      },
+      template: formattedTemplate,
+      message: "Shablon yaratildi",
     });
   } catch (err) {
     next(err);

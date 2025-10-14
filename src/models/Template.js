@@ -6,6 +6,11 @@ const Template = new mongoose.Schema(
     description: { type: String, required: true },
     isVerified: { type: Boolean, default: false },
     banner: { ref: "Image", type: mongoose.Schema.Types.ObjectId },
+
+    deletedAt: { type: Date, default: null },
+    isDeleted: { type: Boolean, default: false },
+    deletedBy: { ref: "User", type: mongoose.Schema.Types.ObjectId },
+
     type: {
       type: String,
       required: true,

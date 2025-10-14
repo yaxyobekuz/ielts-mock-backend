@@ -11,6 +11,7 @@ const Test = new mongoose.Schema(
 
     deletedAt: { type: Date, default: null },
     isDeleted: { type: Boolean, default: false },
+    deletedBy: { ref: "User", type: mongoose.Schema.Types.ObjectId },
 
     totalParts: { type: Number, required: true, default: 0 },
     totalSubmissions: { type: Number, required: true, default: 0 },
@@ -55,3 +56,4 @@ const Test = new mongoose.Schema(
 );
 
 module.exports = mongoose.model("Test", Test);
+ 

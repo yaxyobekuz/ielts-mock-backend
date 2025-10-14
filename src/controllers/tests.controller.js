@@ -6,6 +6,9 @@ const Part = require("../models/Part");
 const Test = require("../models/Test");
 const Audio = require("../models/Audio");
 
+// Helpers
+const { pickAllowedFields } = require("../utils/helpers");
+
 // Upload service
 const { uploadAudio } = require("../services/uploadService");
 
@@ -73,32 +76,26 @@ const createTest = async (req, res, next) => {
 
 // Get tests
 const getTests = async (req, res, next) => {
+  const user = req.user;
   const { mine } = req.query;
-  const createdBy = req.user.id;
+
+  // Filter
+  let filter = { isDeleted: false };
+  if (user.role === "supervisor") filter.supervisor = user._id;
+  else if (user.role === "teacher") filter.createdBy = user._id;
 
   try {
-    let tests;
-
-    // User tests
-    if (mine) {
-      tests = await Test.find({ createdBy })
-        .populate("createdBy", "firstName lastName role avatar")
-        .select("-__v")
-        .sort({ createdAt: -1 });
-    }
-
-    // All tests
-    else {
-      tests = await Test.find()
-        .populate("createdBy", "firstName lastName role avatar")
-        .select("-__v")
-        .sort({ createdAt: -1 });
-    }
+    const tests = await Test.find(filter)
+      .populate("createdBy", "firstName lastName")
+      .select(
+        "title totalSubmissions createdAt isCopied isTemplate isTemplated totalParts"
+      )
+      .sort({ createdAt: -1 });
 
     res.json({
       tests,
       code: "testsFetched",
-      message: "Testlar muvaffaqiyatli olindi",
+      message: "Testlar olindi",
     });
   } catch (err) {
     next(err);
@@ -107,20 +104,25 @@ const getTests = async (req, res, next) => {
 
 // Get latest tests with limit
 const getLatestTests = async (req, res, next) => {
+  const user = req.user;
   const { limit } = req.query;
-  const createdBy = req.user.id;
   const max = parseInt(limit) || 5;
 
+  // Filter
+  let filter = { isDeleted: false };
+  if (user.role === "supervisor") filter.supervisor = user._id;
+  else if (user.role === "teacher") filter.createdBy = user._id;
+
   try {
-    const tests = await Test.find({ createdBy })
+    const tests = await Test.find(filter)
       .sort({ updatedAt: -1 })
       .limit(max)
-      .select("-__v");
+      .select("title updatedAt");
 
     res.json({
       tests,
       code: "latestTestsFetched",
-      message: "Latest tests fetched successfully",
+      message: "So'nggi testlar olindi",
     });
   } catch (err) {
     console.log(err);
@@ -131,22 +133,33 @@ const getLatestTests = async (req, res, next) => {
 
 // Get single test by ID
 const getTestById = async (req, res, next) => {
+  const user = req.user;
   const { id } = req.params;
 
+  // Filter
+  let filter = { _id: id, isDeleted: false };
+  if (user.role === "supervisor") filter.supervisor = user._id;
+  else if (user.role === "teacher") filter.createdBy = user._id;
+
   try {
-    const test = await Test.findById(id)
-      .populate("createdBy", "firstName lastName role avatar")
+    const test = await Test.findOne(filter)
+      .populate({
+        path: "createdBy",
+        populate: "avatar",
+        select: "firstName lastName role avatar",
+      })
       .populate({
         path: "listening.parts reading.parts writing.parts",
         populate: { path: "sections", model: "Section" },
       })
       .populate("listening.audios")
-      .select("-__v");
+      .select("-__v -deletedAt -isDeleted");
 
     if (!test) {
-      return res
-        .status(404)
-        .json({ code: "testNotFound", message: "Test topilmadi" });
+      return res.status(404).json({
+        code: "testNotFound",
+        message: "Test topilmadi",
+      });
     }
 
     res.json({
@@ -161,39 +174,36 @@ const getTestById = async (req, res, next) => {
 
 // Update test
 const updateTest = async (req, res, next) => {
-  const updates = {};
   const { id } = req.params;
   const createdBy = req.user.id;
   const allowedFields = ["title", "description", "image"];
 
   try {
-    allowedFields.forEach((field) => {
-      if (req.body[field] !== undefined) updates[field] = req.body[field];
-    });
-
-    if (!updates?.title || !updates.title.trim().length) {
+    const updates = pickAllowedFields(req.body, allowedFields);
+    if (updates.title && !updates?.title?.trim()?.length) {
       return res.status(400).json({
         code: "invalidProperty",
-        message: "Test sarlavhasi talab qilinadi",
+        message: "Sarlavha talab qilinadi",
       });
     }
 
     const updated = await Test.findOneAndUpdate(
-      { _id: id, createdBy },
+      { _id: id, createdBy, isDeleted: false },
       updates,
       { new: true }
     );
 
     if (!updated) {
-      return res
-        .status(404)
-        .json({ code: "testNotFound", message: "Test topilmadi" });
+      return res.status(404).json({
+        code: "testNotFound",
+        message: "Test topilmadi",
+      });
     }
 
     res.json({
       test: updated,
       code: "testUpdated",
-      message: "Test muvaffaqiyatli yangilandi",
+      message: "Test yangilandi",
     });
   } catch (err) {
     next(err);
@@ -217,7 +227,7 @@ const updateModuleDuration = async (req, res, next) => {
 
   try {
     // Test
-    const test = await Test.findOne({ _id: id, createdBy });
+    const test = await Test.findOne({ _id: id, createdBy, isDeleted: false });
     if (!test) {
       return res.status(404).json({
         code: "testNotFound",
@@ -361,7 +371,12 @@ const deleteTest = async (req, res, next) => {
   const createdBy = req.user.id;
 
   try {
-    const deleted = await Test.findOneAndDelete({ _id: id, createdBy });
+    const deleted = await Test.findOneAndUpdate({
+      _id: id,
+      createdBy,
+      isDeleted: true,
+      deletedAt: Date.now(),
+    });
 
     if (!deleted) {
       return res.status(404).json({
@@ -372,7 +387,7 @@ const deleteTest = async (req, res, next) => {
 
     res.json({
       code: "testDeleted",
-      message: "Test muvaffaqiyatli o'chirildi",
+      message: "Test o'chirildi",
     });
   } catch (err) {
     next(err);

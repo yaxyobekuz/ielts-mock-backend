@@ -13,6 +13,7 @@ const Test = new mongoose.Schema(
     isDeleted: { type: Boolean, default: false },
 
     totalParts: { type: Number, required: true, default: 0 },
+    totalSubmissions: { type: Number, required: true, default: 0 },
     originalTest: { ref: "Test", type: mongoose.Schema.Types.ObjectId },
 
     isTemplate: { type: Boolean, default: false },

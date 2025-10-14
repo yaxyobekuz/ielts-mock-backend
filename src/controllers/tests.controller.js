@@ -5,6 +5,7 @@ const mongoose = require("mongoose");
 const Part = require("../models/Part");
 const Test = require("../models/Test");
 const Audio = require("../models/Audio");
+const Template = require("../models/Template");
 
 // Helpers
 const { pickAllowedFields } = require("../utils/helpers");
@@ -88,7 +89,7 @@ const getTests = async (req, res, next) => {
     const tests = await Test.find(filter)
       .populate("createdBy", "firstName lastName")
       .select(
-        "title totalSubmissions createdAt isCopied isTemplate isTemplated totalParts"
+        "title totalSubmissions createdAt isCopied isTemplate isTemplated template totalParts"
       )
       .sort({ createdAt: -1 });
 
@@ -176,7 +177,7 @@ const getTestById = async (req, res, next) => {
 const updateTest = async (req, res, next) => {
   const { id } = req.params;
   const createdBy = req.user.id;
-  const allowedFields = ["title", "description", "image"];
+  const allowedFields = ["title", "description"];
 
   try {
     const updates = pickAllowedFields(req.body, allowedFields);
@@ -368,21 +369,33 @@ const deleteAudioFromModule = async (req, res, next) => {
 // Delete test
 const deleteTest = async (req, res, next) => {
   const { id } = req.params;
-  const createdBy = req.user.id;
+  const userId = req.user.id;
 
   try {
-    const deleted = await Test.findOneAndUpdate({
-      _id: id,
-      createdBy,
-      isDeleted: true,
-      deletedAt: Date.now(),
-    });
+    const deleted = await Test.findOneAndUpdate(
+      {
+        _id: id,
+        createdBy: userId,
+      },
+      {
+        isDeleted: true,
+        deletedBy: userId,
+        deletedAt: Date.now(),
+      }
+    );
 
     if (!deleted) {
       return res.status(404).json({
         code: "testNotFound",
         message: "Test topilmadi",
       });
+    }
+
+    if (deleted.isTemplate) {
+      await Template.findOneAndUpdate(
+        { _id: deleted.template },
+        { isDeleted: true, deletedBy: userId, deletedAt: Date.now() }
+      );
     }
 
     res.json({

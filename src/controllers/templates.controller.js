@@ -98,7 +98,9 @@ const createTemplate = async (req, res, next) => {
 // Get templates
 const getTemplates = async (req, res, next) => {
   try {
-    const templates = await Template.find()
+    const templates = await Template.find({
+      $or: [{ isDeleted: false }, { isDeleted: { $exists: false } }],
+    })
       .populate("banner")
       .sort({ createdAt: -1 })
       .select("-__v -images -createdBy");
@@ -119,7 +121,10 @@ const getTemplateById = async (req, res, next) => {
   const { random } = req.query;
 
   try {
-    const template = await Template.findById(id)
+    const template = await Template.findOne({
+      _id: id,
+      $or: [{ isDeleted: false }, { isDeleted: { $exists: false } }],
+    })
       .populate("images")
       .sort({ createdAt: -1 })
       .select("-__v -banner -createdBy");
@@ -135,7 +140,11 @@ const getTemplateById = async (req, res, next) => {
     // Get extra random templates
     if (random === "true") {
       extraTemplates = await Template.aggregate([
-        { $match: { _id: { $ne: template._id } } },
+        {
+          $match: {
+            $or: [{ isDeleted: false }, { isDeleted: { $exists: false } }],
+          },
+        },
         { $sample: { size: 4 } },
         {
           $lookup: {
@@ -241,7 +250,10 @@ const useTemplate = async (req, res, next) => {
 
   try {
     // Template
-    const template = await Template.findById(id);
+    const template = await Template.findOne({
+      _id: id,
+      $or: [{ isDeleted: false }, { isDeleted: { $exists: false } }],
+    });
     if (!template) {
       return res.status(404).json({
         code: "templateNotFound",

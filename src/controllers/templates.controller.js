@@ -278,7 +278,9 @@ const useTemplate = async (req, res, next) => {
       title,
       createdBy,
       supervisor,
-      isCopied: true,
+      isTemplated: true,
+      template: template._id,
+      templatedBy: createdBy,
       originalTest: originalTest._id,
       image: image || originalTest.image,
       totalParts: originalTest.totalParts,
@@ -356,8 +358,25 @@ const useTemplate = async (req, res, next) => {
     originalTest.copyCount = (originalTest.copyCount || 0) + 1;
     await originalTest.save();
 
+    // Test for user response
+    const testForUser = {};
+    testForUser._id = savedTest._id;
+    testForUser.title = savedTest.title;
+    testForUser.isCopied = savedTest.isCopied;
+    testForUser.createdAt = savedTest.createdAt;
+    testForUser.totalParts = savedTest.totalParts;
+    testForUser.isTemplate = savedTest.isTemplate;
+    testForUser.isTemplated = savedTest.isTemplated;
+    testForUser.description = savedTest.description;
+    testForUser.totalSubmissions = savedTest.totalSubmissions;
+
+    testForUser.createdBy = {};
+    testForUser.createdBy.id = createdBy;
+    testForUser.createdBy.lastName = req.user.lastName;
+    testForUser.createdBy.firstName = req.user.firstName;
+
     res.status(201).json({
-      test: savedTest,
+      test: testForUser,
       code: "templateUsed",
       message: "Yangi test shablondan nusxa olindi",
     });

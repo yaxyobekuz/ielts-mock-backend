@@ -19,6 +19,7 @@ const Test = new mongoose.Schema(
 
     isTemplate: { type: Boolean, default: false },
     isTemplated: { type: Boolean, default: false },
+    templatedBy: { ref: "User", type: mongoose.Schema.Types.ObjectId },
     template: { ref: "Template", type: mongoose.Schema.Types.ObjectId },
 
     reading: {
@@ -56,4 +57,3 @@ const Test = new mongoose.Schema(
 );
 
 module.exports = mongoose.model("Test", Test);
- 

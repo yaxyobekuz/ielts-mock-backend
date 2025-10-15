@@ -48,7 +48,7 @@ const updateUserAvatar = async (req, res, next) => {
   }
 };
 
-// Get user
+// Update user
 const updateUser = async (req, res, next) => {
   const userId = req.user._id;
   const updatedFields = pickAllowedFields(req.body, [
@@ -75,4 +75,8 @@ const updateUser = async (req, res, next) => {
   }
 };
 
-module.exports = { updateUserAvatar, getUserById, updateUser };
+module.exports = {
+  updateUser,
+  getUserById,
+  updateUserAvatar,
+};

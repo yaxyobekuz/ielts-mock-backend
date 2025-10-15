@@ -90,26 +90,28 @@ const getTeachers = async (req, res, next) => {
 // Get single teacher by ID
 const getTeacherById = async (req, res, next) => {
   const { id } = req.params;
+  const { _id: userId, role: userRole } = req.user;
+
+  // Filter
+  let filter = { _id: id };
+  if (userRole === "supervisor") filter.supervisor = userId;
 
   try {
-    const teacher = await Teacher.findById(id)
-      .populate("createdBy", "firstName lastName role avatar")
-      .populate({
-        path: "listening.parts reading.parts writing.parts",
-        populate: { path: "sections", model: "Section" },
-      })
-      .select("-__v");
+    const teacher = await Teacher.findOne(filter)
+      .populate("avatar")
+      .select("-__v -password -balance -chatId -updatedAt");
 
     if (!teacher) {
-      return res
-        .status(404)
-        .json({ code: "teacherNotFound", message: "Teacher topilmadi" });
+      return res.status(404).json({
+        code: "teacherNotFound",
+        message: "Ustoz topilmadi",
+      });
     }
 
     res.json({
       teacher,
       code: "teacherFetched",
-      message: "Teacher muvaffaqiyatli olindi",
+      message: "Ustoz olindi",
     });
   } catch (err) {
     next(err);
@@ -157,9 +159,40 @@ const updateTeacher = async (req, res, next) => {
   }
 };
 
+// Update user permissions
+const updateTeacherPermissions = async (req, res, next) => {
+  const userId = req.user._id;
+  const permissions = req.body;
+  const teacherId = req.params.id;
+
+  try {
+    const teacher = await User.findOneAndUpdate(
+      { _id: teacherId, supervisor: userId, role: "teacher" },
+      { permissions },
+      { new: true }
+    );
+
+    if (!teacher) {
+      return res.status(404).json({
+        code: "teacherNotFound",
+        message: "Ustoz topilmadi",
+      });
+    }
+
+    res.json({
+      permissions: teacher.permissions,
+      code: "teacherPermissionsUpdated",
+      message: "Ustoz ruxsatlari yangilandi",
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   getTeachers,
   createTeacher,
   updateTeacher,
   getTeacherById,
+  updateTeacherPermissions,
 };

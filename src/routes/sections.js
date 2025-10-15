@@ -12,12 +12,37 @@ const {
 
 // Middlewares
 const { auth, roleCheck } = require("../middlewares/auth");
+const checkPermission = require("../middlewares/permission");
 const notStudent = roleCheck(["teacher", "supervisor", "admin", "owner"]);
 
 router.get("/", auth, notStudent, getSections);
 router.get("/:id", auth, notStudent, getSectionById);
-router.post("/", auth, roleCheck(["teacher"]), createSection);
-router.put("/:id", auth, roleCheck(["teacher"]), updateSection);
-router.delete("/:id", auth, roleCheck(["teacher"]), deleteSection);
+
+// Create new section
+router.post(
+  "/",
+  auth,
+  roleCheck(["teacher"]),
+  checkPermission("canEditTest"),
+  createSection
+);
+
+// Edit section
+router.put(
+  "/:id",
+  auth,
+  roleCheck(["teacher"]),
+  checkPermission("canEditTest"),
+  updateSection
+);
+
+// Delete section
+router.delete(
+  "/:id",
+  auth,
+  roleCheck(["teacher"]),
+  checkPermission("canEditTest"),
+  deleteSection
+);
 
 module.exports = router;

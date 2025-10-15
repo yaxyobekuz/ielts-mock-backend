@@ -12,11 +12,21 @@ const {
 } = require("../controllers/link.controller");
 
 // Middlewares
-const { auth } = require("../middlewares/auth");
+const { auth, roleCheck } = require("../middlewares/auth");
+const checkPermission = require("../middlewares/permission");
 
 router.get("/", auth, getLinks);
 router.get("/:id", auth, getLink);
-router.post("/", auth, createLink);
+
+// Create new link
+router.post(
+  "/",
+  auth,
+  roleCheck(["teacher", "supervisor"]),
+  checkPermission("canCreateLink"),
+  createLink
+);
+
 router.post("/:id/usage", auth, addUsage);
 router.get("/:id/preview", auth, getLinkPreview);
 

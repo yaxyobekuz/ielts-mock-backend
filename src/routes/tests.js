@@ -19,19 +19,38 @@ const { upload } = require("../utils/multer.js");
 
 // Middlewares
 const { auth, roleCheck } = require("../middlewares/auth");
+const checkPermission = require("../middlewares/permission.js");
 const notStudent = roleCheck(["teacher", "supervisor", "admin", "owner"]);
 
 // Get all tests
 router.get("/", auth, notStudent, getTests);
 
 // Delete test
-router.delete("/:id", auth, notStudent, deleteTest);
+router.delete(
+  "/:id",
+  auth,
+  notStudent,
+  checkPermission("canDeleteTest", "canDeleteTemplate"),
+  deleteTest
+);
 
 // Create new test
-router.post("/", auth, roleCheck(["teacher"]), createTest);
+router.post(
+  "/",
+  auth,
+  roleCheck(["teacher"]),
+  checkPermission("canCreateTest"),
+  createTest
+);
 
-// Update test
-router.put("/:id", auth, roleCheck(["teacher"]), updateTest);
+// Edit test
+router.put(
+  "/:id",
+  auth,
+  roleCheck(["teacher"]),
+  checkPermission("canEditTest"),
+  updateTest
+);
 
 // Get latest tests
 router.get(
@@ -46,6 +65,7 @@ router.put(
   "/:id/:module/duration",
   auth,
   roleCheck(["teacher"]),
+  checkPermission("canEditTest"),
   updateModuleDuration
 );
 
@@ -54,6 +74,7 @@ router.delete(
   "/:id/:module/audios/:audioId",
   auth,
   roleCheck(["teacher"]),
+  checkPermission("canEditTest"),
   deleteAudioFromModule
 );
 
@@ -65,6 +86,7 @@ router.post(
   "/:id/:module/audios",
   auth,
   roleCheck(["teacher"]),
+  checkPermission("canEditTest"),
   upload.single("file"),
   addAudioToModule
 );

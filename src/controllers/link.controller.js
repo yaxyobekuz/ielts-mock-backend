@@ -103,9 +103,26 @@ const createLink = async (req, res, next) => {
 // Get link
 const getLink = async (req, res, next) => {
   const { id } = req.params;
+  const userId = req.user._id;
+  const userRole = req.user.role;
 
   try {
-    const link = await Link.findById(id);
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        code: "invalidId",
+        message: "Havola ID yaroqsiz",
+      });
+    }
+
+    const link = await Link.findById(id)
+      .populate({
+        path: "createdBy",
+        populate: "avatar",
+        select: "firstName lastName avatar phone role",
+      })
+      .select("-__v")
+      .lean();
+
     if (!link) {
       return res.status(404).json({
         code: "linkNotFound",
@@ -113,10 +130,33 @@ const getLink = async (req, res, next) => {
       });
     }
 
+    // Check permissions
+    const supervisorId = link.supervisor?.toString();
+    const createdById = link.createdBy?._id?.toString();
+
+    if (userRole === "teacher") {
+      if (userId.toString() !== createdById) {
+        return res.status(403).json({
+          code: "forbidden",
+          message: "Sizda bu havolani ko'rish huquqi yo'q",
+        });
+      }
+    } else if (userRole === "supervisor") {
+      if (
+        userId.toString() !== supervisorId &&
+        userId.toString() !== createdById
+      ) {
+        return res.status(403).json({
+          code: "forbidden",
+          message: "Sizda bu havolani ko'rish huquqi yo'q",
+        });
+      }
+    }
+
     res.json({
       link,
-      code: "linkFound",
-      message: "Havola topildi",
+      code: "linkFetched",
+      message: "Havola olindi",
     });
   } catch (err) {
     next(err);
@@ -125,31 +165,66 @@ const getLink = async (req, res, next) => {
 
 // Get links
 const getLinks = async (req, res, next) => {
-  const createdBy = req.user.id;
-  const { mine, testId } = req.query;
+  const userId = req.user._id;
+  const userRole = req.user.role;
+  const testId = req.query.testId;
+
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const search = req.query.search?.trim() || "";
 
   try {
-    let links;
+    const filter = {};
+    const skip = (page - 1) * limit;
 
-    // User links
-    if (mine) {
-      links = await Link.find({ createdBy, testId })
-        .select("-__v -usages -visits")
-        .sort({ createdAt: -1 });
+    // Role-based filtering
+    if (userRole === "teacher") {
+      filter.createdBy = userId;
+    } else if (userRole === "supervisor") {
+      filter.supervisor = userId;
     }
 
-    // All links
-    else {
-      links = await Link.find()
-        .populate("createdBy", "firstName lastName role avatar")
-        .select("-__v -usages -visits")
-        .sort({ createdAt: -1 });
+    // Filter by testId
+    if (testId && mongoose.Types.ObjectId.isValid(testId)) {
+      filter.testId = testId;
     }
+
+    // Search by title
+    if (search) {
+      filter.title = { $regex: search, $options: "i" };
+    }
+
+    const [links, total] = await Promise.all([
+      Link.find(filter)
+        .populate({
+          path: "createdBy",
+          populate: "avatar",
+          select: "firstName lastName avatar role",
+        })
+        .sort({ createdAt: -1 })
+        .select("-__v -visits -usages")
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Link.countDocuments(filter),
+    ]);
+
+    const totalPages = Math.ceil(total / limit);
+    const hasNextPage = page < totalPages;
+    const hasPrevPage = page > 1;
 
     res.json({
       links,
       code: "linksFetched",
-      message: "Havolalar muvaffaqiyatli olindi",
+      message: "Havolalar topildi",
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages,
+        hasNextPage,
+        hasPrevPage,
+      },
     });
   } catch (err) {
     next(err);

@@ -8,7 +8,9 @@ const permissionSchema = new mongoose.Schema(
     canDeleteTest: { type: Boolean, default: false },
     canCreateTest: { type: Boolean, default: false },
 
+    canEditLink: { type: Boolean, default: false },
     canCreateLink: { type: Boolean, default: false },
+    canDeleteLink: { type: Boolean, default: false },
 
     canEditResult: { type: Boolean, default: false },
     canCreateResult: { type: Boolean, default: false },
@@ -59,7 +61,9 @@ User.pre("save", async function (next) {
         canDeleteTest: false,
         canCreateTest: true,
 
-        canCreateLink: true,
+        canEditLink: false,
+        canCreateLink: false,
+        canDeleteLink: false,
 
         canEditResult: true,
         canCreateResult: true,

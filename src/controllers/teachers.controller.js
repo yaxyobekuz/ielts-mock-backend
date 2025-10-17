@@ -74,6 +74,7 @@ const getTeachers = async (req, res, next) => {
     if (userRole === "supervisor") filter.supervisor = supervisorId;
 
     const teachers = await User.find(filter)
+      .populate("avatar")
       .select("-__v -password -balance -chatId")
       .sort({ createdAt: -1 });
 

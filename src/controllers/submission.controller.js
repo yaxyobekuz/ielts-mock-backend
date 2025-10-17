@@ -30,6 +30,10 @@ const createSubmission = async (req, res, next) => {
       });
     }
 
+    // Increment total submissions count
+    test.totalSubmissions = (test.totalSubmissions || 0) + 1;
+    await test.save();
+
     await Submission.create({
       answers,
       link: linkId,

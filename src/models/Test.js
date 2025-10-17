@@ -23,18 +23,21 @@ const Test = new mongoose.Schema(
     template: { ref: "Template", type: mongoose.Schema.Types.ObjectId },
 
     reading: {
+      updatedAt: { type: Date },
       partsCount: { type: Number, required: true, default: 0 },
       duration: { type: Number, default: 60, min: 5, max: 180 },
       parts: [{ ref: "Part", type: mongoose.Schema.Types.ObjectId }],
     },
 
     writing: {
+      updatedAt: { type: Date },
       partsCount: { type: Number, required: true, default: 0 },
       duration: { type: Number, default: 60, min: 5, max: 180 },
       parts: [{ ref: "Part", type: mongoose.Schema.Types.ObjectId }],
     },
 
     listening: {
+      updatedAt: { type: Date },
       partsCount: { type: Number, required: true, default: 0 },
       duration: { type: Number, default: 60, min: 5, max: 180 },
       parts: [{ ref: "Part", type: mongoose.Schema.Types.ObjectId }],

@@ -45,6 +45,8 @@ const createPart = async (req, res, next) => {
       supervisor: supervisor || createdBy,
     });
 
+    test[module].updatedAt = Date.now();
+
     test[module].parts.push(part);
     test[module].partsCount = partNumber;
     test.totalParts =
@@ -56,7 +58,7 @@ const createPart = async (req, res, next) => {
     res.status(201).json({
       part,
       code: "partCreated",
-      message: "Yangi qism muvaffaqiyatli yaratildi",
+      message: "Yangi qism yaratildi",
     });
   } catch (err) {
     next(err);
@@ -73,7 +75,7 @@ const getParts = async (req, res, next) => {
     res.json({
       parts,
       code: "partsFetched",
-      message: "Barcha qismlar muvaffaqiyatli olindi",
+      message: "Barcha qismlar olindi",
     });
   } catch (err) {
     next(err);
@@ -98,7 +100,7 @@ const getPartById = async (req, res, next) => {
     res.json({
       part,
       code: "partFetched",
-      message: "Qism muvaffaqiyatli olindi",
+      message: "Qism olindi",
     });
   } catch (err) {
     next(err);
@@ -118,16 +120,23 @@ const updatePart = async (req, res, next) => {
     }).populate("sections");
 
     if (!part) {
-      return res
-        .status(404)
-        .json({ code: "partNotFound", message: "Qism topilmadi" });
+      return res.status(404).json({
+        code: "partNotFound",
+        message: "Qism topilmadi",
+      });
     }
 
     res.json({
       part,
       code: "partUpdated",
-      message: "Qism muvaffaqiyatli yangilandi",
+      message: "Qism yangilandi",
     });
+
+    const test = await Test.findById(part.testId);
+    if (test) {
+      test[part.module].updatedAt = Date.now();
+      await test.save();
+    }
   } catch (err) {
     next(err);
   }
@@ -154,7 +163,9 @@ const deletePart = async (req, res, next) => {
 
           const module = test[deleted.module];
           module.parts.pull(deleted._id);
+          module.updatedAt = Date.now();
           module.partsCount -= 1;
+
           test.totalParts -= 1;
           await test.save();
 

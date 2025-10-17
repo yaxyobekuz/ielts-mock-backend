@@ -8,6 +8,8 @@ const {
   addUsage,
   getLinks,
   createLink,
+  updateLink,
+  deleteLink,
   getLinkPreview,
 } = require("../controllers/link.controller");
 
@@ -25,6 +27,24 @@ router.post(
   roleCheck(["teacher", "supervisor"]),
   checkPermission("canCreateLink"),
   createLink
+);
+
+// Update link
+router.put(
+  "/:id",
+  auth,
+  roleCheck(["teacher", "supervisor"]),
+  checkPermission("canEditLink"),
+  updateLink
+);
+
+// Delete link
+router.delete(
+  "/:id",
+  auth,
+  roleCheck(["teacher", "supervisor"]),
+  checkPermission("canDeleteLink"),
+  deleteLink
 );
 
 router.post("/:id/usage", auth, addUsage);

@@ -6,7 +6,7 @@ const Link = require("../models/Link");
 const Test = require("../models/Test");
 
 // Helpers
-const { shuffleArray } = require("../utils/helpers");
+const { shuffleArray, pickAllowedFields } = require("../utils/helpers");
 
 const prepareTestForUser = async (testId) => {
   try {
@@ -71,7 +71,7 @@ const prepareTestForUser = async (testId) => {
 // Create link
 const createLink = async (req, res, next) => {
   const { _id: createdBy, supervisor } = req.user;
-  const { title, testId, maxUses } = req.body;
+  const { title, testId, maxUses, requireComment } = req.body;
 
   try {
     const test = await Test.findById(testId);
@@ -87,6 +87,7 @@ const createLink = async (req, res, next) => {
       testId,
       maxUses,
       createdBy,
+      requireComment,
       supervisor: supervisor || createdBy,
     });
 
@@ -94,6 +95,72 @@ const createLink = async (req, res, next) => {
       link,
       code: "linkCreated",
       message: "Havola yaratildi",
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Update link
+const updateLink = async (req, res, next) => {
+  const user = req.user;
+  const id = req.params.id;
+
+  // Pick allowed fields
+  const allowedFields = ["title", "maxUses", "requireComment"];
+  const updates = pickAllowedFields(req.body, allowedFields);
+
+  // Filter
+  let filter = { _id: id };
+  if (user.role === "teacher") {
+    filter.createdBy = user._id;
+  } else if (user.role === "supervisor") {
+    filter.supervisor = user._id;
+  }
+
+  try {
+    const link = await Link.findOneAndUpdate(filter, updates, { new: true });
+    if (!link) {
+      return res.status(404).json({
+        code: "linkNotFound",
+        message: "Havola topilmadi",
+      });
+    }
+
+    res.json({
+      link,
+      updates,
+      code: "linkUpdated",
+      message: "Havola yangilandi",
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Delete link
+const deleteLink = async (req, res, next) => {
+  const user = req.user;
+  const id = req.params.id;
+
+  // Filter
+  let filter = { _id: id };
+  if (user.role === "teacher") filter.createdBy = user._id;
+  else if (user.role === "supervisor") filter.supervisor = user._id;
+
+  try {
+    const link = await Link.findOneAndDelete(filter);
+    if (!link) {
+      return res.status(404).json({
+        code: "linkNotFound",
+        message: "Havola topilmadi",
+      });
+    }
+
+    res.json({
+      link,
+      code: "linkDeleted",
+      message: "Havola o'chirildi",
     });
   } catch (err) {
     next(err);
@@ -318,5 +385,7 @@ module.exports = {
   addUsage,
   getLinks,
   createLink,
+  updateLink,
+  deleteLink,
   getLinkPreview,
 };

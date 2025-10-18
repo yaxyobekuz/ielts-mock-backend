@@ -15,7 +15,14 @@ const { roundToNearestHalf } = require("../utils/helpers");
 // Create result
 const createResult = async (req, res, next) => {
   const userId = req.user._id;
-  const { submissionId } = req.body;
+  const { submissionId, listening, reading } = req.body;
+
+  if (isNaN(Number(listening)) || isNaN(Number(reading))) {
+    return res.status(400).json({
+      code: "invalidScores",
+      message: "Listening yoki Reading ballari noto'g'ri kiritilgan",
+    });
+  }
 
   try {
     // Submission
@@ -68,23 +75,38 @@ const createResult = async (req, res, next) => {
       "reading"
     );
 
-    const total = listeningScore + readingScore + writingScore + speakingScore;
-    const overall = roundToNearestHalf(total / 4);
+    const serverTotal =
+      listeningScore + readingScore + writingScore + speakingScore;
+    const teacherTotal =
+      Number(listening) + Number(reading) + writingScore + speakingScore;
 
-    // Create result
-    const result = await Result.create({
-      overall,
-      createdBy: userId,
-      ...formattedCriteria,
-      test: submission.test,
-      link: submission.link,
+    const serverOverall = roundToNearestHalf(serverTotal / 4);
+    const teacherOverall = roundToNearestHalf(teacherTotal / 4);
+
+    // Server
+    const server = {
+      overall: serverOverall,
       reading: readingScore,
       writing: writingScore,
       speaking: speakingScore,
       listening: listeningScore,
+    };
+
+    // Create result
+    const result = await Result.create({
+      server,
+      createdBy: userId,
+      ...formattedCriteria,
+      test: submission.test,
+      link: submission.link,
+      writing: writingScore,
+      overall: teacherOverall,
+      speaking: speakingScore,
+      reading: Number(reading),
       submission: submission._id,
-      student: submission.student || "68cec957385513f3a2602d80",
+      student: submission.student,
       teacher: submission.teacher,
+      listening: Number(listening),
       supervisor: submission.supervisor,
     });
 
@@ -145,7 +167,7 @@ const getResultById = async (req, res, next) => {
   let populate = {
     path: "student",
     populate: "avatar",
-    select: "firstName lastName avatar role",
+    select: "firstName lastName avatar role phone",
   };
 
   if (populateTest) {

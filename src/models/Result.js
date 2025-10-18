@@ -15,6 +15,13 @@ const Result = new mongoose.Schema(
     writing: NumberSchema,
     speaking: NumberSchema,
     listening: NumberSchema,
+    server: {
+      overall: NumberSchema,
+      reading: NumberSchema,
+      writing: NumberSchema,
+      speaking: NumberSchema,
+      listening: NumberSchema,
+    },
     test: { ref: "Test", required: true, type: mongoose.Schema.Types.ObjectId },
     link: { ref: "Link", required: true, type: mongoose.Schema.Types.ObjectId },
     writingCriteria: {

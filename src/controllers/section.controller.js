@@ -108,6 +108,7 @@ const updateSection = async (req, res, next) => {
     "coords",
     "options",
     "answers",
+    "splitAnswers",
     "description",
     "questionsCount",
   ];

@@ -55,6 +55,7 @@ const Section = new mongoose.Schema(
     groups: [Group],
 
     // text-draggable & flowchart
+    splitAnswers: { type: Boolean, default: false },
     options: { title: { type: String }, data: [Option] },
 
     // flowchart

@@ -72,10 +72,19 @@ const roundToNearestHalf = (num) => {
   return Math.round(num * 2) / 2;
 };
 
-const isEqualStringArray = (arr1, arr2) =>
-  arr1.length === arr2.length &&
-  arr1.slice().sort().join().trim().toLowerCase() ===
-    arr2.slice().sort().join().trim().toLowerCase();
+const isEqualStringArray = (arr1, arr2) => {
+  if (arr1.length !== arr2.length) return false;
+
+  const normalize = (str) =>
+    str
+      .trim()
+      .toLowerCase()
+      .replace(/[.,!?;:]$/g, "");
+  const sorted1 = arr1.map(normalize).sort();
+  const sorted2 = arr2.map(normalize).sort();
+
+  return sorted1.every((val, idx) => val === sorted2[idx]);
+};
 
 // Shuffle
 const shuffleArray = (arr = []) => {

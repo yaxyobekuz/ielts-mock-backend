@@ -71,7 +71,9 @@ const countCorrectAnswers = (answers, correctAnswers) => {
   for (const key in correctAnswers) {
     if (answers[key]) {
       if (typeof answers[key] === "object") {
-        if (isEqualStringArray(answers[key], correctAnswers[key])) count++;
+        if (isEqualStringArray(answers[key], correctAnswers[key])) {
+          count = count + (correctAnswers[key]?.length || 1);
+        }
       } else {
         const answer = answers[key]?.trim()?.toLowerCase();
         const correctAnswer = correctAnswers[key]?.trim()?.toLowerCase();

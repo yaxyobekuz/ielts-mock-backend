@@ -18,23 +18,42 @@ const {
 const { upload } = require("../utils/multer.js");
 
 // Middlewares
+const validateId = require("../middlewares/validateId");
 const { auth, roleCheck } = require("../middlewares/auth");
 const checkPermission = require("../middlewares/permission.js");
 const notStudent = roleCheck(["teacher", "supervisor", "admin", "owner"]);
 
-// Get all tests
+/**
+ * GET /tests
+ * Description: Retrieve all tests
+ * Access: Teacher, Supervisor, Admin, Owner
+ */
 router.get("/", auth, notStudent, getTests);
 
-// Delete test
-router.delete(
-  "/:id",
+/**
+ * GET /tests/latest
+ * Description: Retrieve latest tests
+ * Access: Teacher, Supervisor
+ */
+router.get(
+  "/latest",
   auth,
-  notStudent,
-  checkPermission("canDeleteTest", "canDeleteTemplate"),
-  deleteTest
+  roleCheck(["supervisor", "teacher"]),
+  getLatestTests
 );
 
-// Create new test
+/**
+ * GET /tests/:id
+ * Description: Retrieve a specific test by ID
+ * Access: Teacher, Supervisor, Admin, Owner
+ */
+router.get("/:id", auth, notStudent, validateId("id"), getTestById);
+
+/**
+ * POST /tests
+ * Description: Create a new test
+ * Access: Teacher (with canCreateTest permission)
+ */
 router.post(
   "/",
   auth,
@@ -43,52 +62,75 @@ router.post(
   createTest
 );
 
-// Edit test
+/**
+ * PUT /tests/:id
+ * Description: Update an existing test
+ * Access: Teacher (with canEditTest permission)
+ */
 router.put(
   "/:id",
   auth,
   roleCheck(["teacher"]),
+  validateId("id"),
   checkPermission("canEditTest"),
   updateTest
 );
 
-// Get latest tests
-router.get(
-  "/latest",
+/**
+ * DELETE /tests/:id
+ * Description: Delete a test
+ * Access: Teacher, Supervisor, Admin, Owner (with canDeleteTest permission)
+ */
+router.delete(
+  "/:id",
   auth,
-  roleCheck(["supervisor", "teacher"]),
-  getLatestTests
+  notStudent,
+  validateId("id"),
+  checkPermission("canDeleteTest", "canDeleteTemplate"),
+  deleteTest
 );
 
-// Update module duration
+/**
+ * PUT /tests/:id/:module/duration
+ * Description: Update the duration of a specific module
+ * Access: Teacher (with canEditTest permission)
+ */
 router.put(
   "/:id/:module/duration",
   auth,
   roleCheck(["teacher"]),
+  validateId("id"),
   checkPermission("canEditTest"),
   updateModuleDuration
 );
 
-// Delete module audio
-router.delete(
-  "/:id/:module/audios/:audioId",
-  auth,
-  roleCheck(["teacher"]),
-  checkPermission("canEditTest"),
-  deleteAudioFromModule
-);
-
-// Get test by ID
-router.get("/:id", auth, notStudent, getTestById);
-
-// Add audio to module
+/**
+ * POST /tests/:id/:module/audios
+ * Description: Add audio file to a specific module
+ * Access: Teacher (with canEditTest permission)
+ */
 router.post(
   "/:id/:module/audios",
   auth,
   roleCheck(["teacher"]),
+  validateId("id"),
   checkPermission("canEditTest"),
   upload.single("file"),
   addAudioToModule
+);
+
+/**
+ * DELETE /tests/:id/:module/audios/:audioId
+ * Description: Delete audio file from a specific module
+ * Access: Teacher (with canEditTest permission)
+ */
+router.delete(
+  "/:id/:module/audios/:audioId",
+  auth,
+  roleCheck(["teacher"]),
+  validateId(["id", "audioId"]),
+  checkPermission("canEditTest"),
+  deleteAudioFromModule
 );
 
 module.exports = router;

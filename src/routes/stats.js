@@ -7,6 +7,11 @@ const { auth, roleCheck } = require("../middlewares/auth");
 // Controllers
 const { getStats } = require("../controllers/stats.controller");
 
+/**
+ * GET /stats
+ * Description: Retrieve statistics data
+ * Access: Teacher, Supervisor, Admin, Owner
+ */
 router.get(
   "/",
   auth,

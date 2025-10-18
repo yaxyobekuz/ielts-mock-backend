@@ -1,6 +1,12 @@
+// Data
+const texts = require("../data/texts");
+
 // Models
 const Result = require("../models/Result");
 const Submission = require("../models/Submission");
+
+// Services
+const { sendMessage } = require("../services/bot");
 
 // Helpers
 const {
@@ -26,7 +32,9 @@ const createResult = async (req, res, next) => {
 
   try {
     // Submission
-    const submission = await Submission.findById(submissionId);
+    const submission = await Submission.findById(submissionId).populate(
+      "student"
+    );
     if (!submission) {
       return res.status(404).json({
         code: "submissionNotFound",
@@ -120,6 +128,36 @@ const createResult = async (req, res, next) => {
       code: "resultCreated",
       message: "Natija muvaffaqiyatli yaratilindi",
     });
+
+    // Send notification to student
+    const chatId = submission.student?.chatId;
+    if (!chatId) return;
+    await sendMessage(
+      chatId,
+      texts.resultReady(
+        teacherOverall,
+        reading,
+        writingScore,
+        speakingScore,
+        listening
+      ),
+      {
+        inline_keyboard: [
+          [
+            {
+              text: "Javoblarni ko'rish",
+              url: `https://cdimock.uz/profile/submissions/${submission._id}`,
+            },
+          ],
+          [
+            {
+              text: "Saytga kirish",
+              url: `https://cdimock.uz/profile/results/${result._id}`,
+            },
+          ],
+        ],
+      }
+    );
   } catch (err) {
     next(err);
   }
@@ -138,8 +176,7 @@ const getResults = async (req, res, next) => {
   };
 
   if (populateTest) {
-    populate.path = "test";
-    populate.select = "title description";
+    populate = { path: "test", select: "title description" };
   }
 
   // Filter
@@ -150,6 +187,7 @@ const getResults = async (req, res, next) => {
   try {
     const results = await Result.find(filter)
       .populate(populate)
+      .sort({ createdAt: -1 })
       .select("-teacher -supervisor -createdBy -__v");
 
     res.json({ code: "resultsFetched", results });
@@ -171,8 +209,7 @@ const getResultById = async (req, res, next) => {
   };
 
   if (populateTest) {
-    populate.path = "test";
-    populate.select = "title description";
+    populate = { path: "test", select: "title description" };
   }
 
   // Filter
@@ -198,7 +235,7 @@ const getResultById = async (req, res, next) => {
   }
 };
 
-// Result yangilash (masalan, foydalanuvchi javob qo‘shsa yoki testni tugatsa)
+// Update result
 const updateResult = async (req, res, next) => {
   try {
     const data = req.body;

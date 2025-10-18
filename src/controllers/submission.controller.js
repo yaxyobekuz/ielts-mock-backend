@@ -65,8 +65,7 @@ const getSubmissions = async (req, res, next) => {
   };
 
   if (populateTest) {
-    populate.path = "test";
-    populate.select = "title description";
+    populate = { path: "test", select: "title description" };
   }
 
   // Filter by user role
@@ -77,6 +76,7 @@ const getSubmissions = async (req, res, next) => {
   try {
     const submissions = await Submission.find(filter)
       .populate(populate)
+      .sort({ createdAt: -1 })
       .select("-answers");
 
     res.json({ code: "submissionsFetched", submissions });

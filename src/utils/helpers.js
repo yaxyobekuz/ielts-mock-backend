@@ -97,9 +97,14 @@ const shuffleArray = (arr = []) => {
   return copy;
 };
 
+const appendDotZero = (value) => {
+  return String(value)?.padEnd(3, ".0");
+};
+
 module.exports = {
   delay,
   shuffleArray,
+  appendDotZero,
   extractNumbers,
   getRandomNumber,
   getLetterByIndex,

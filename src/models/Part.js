@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 const Part = new mongoose.Schema(
   {
     text: { type: String },
+    title: { type: String },
     description: { type: String },
     number: { type: Number, required: true },
     module: { type: String, required: true },

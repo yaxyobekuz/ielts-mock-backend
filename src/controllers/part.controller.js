@@ -111,7 +111,7 @@ const getPartById = async (req, res, next) => {
 const updatePart = async (req, res, next) => {
   const { id } = req.params;
   const createdBy = req.user.id;
-  const allowedFields = ["text", "description"];
+  const allowedFields = ["text", "description", "title"];
   const partData = pickAllowedFields(req.body, allowedFields);
 
   try {

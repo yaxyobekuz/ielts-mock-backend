@@ -101,6 +101,10 @@ const appendDotZero = (value) => {
   return String(value)?.padEnd(3, ".0");
 };
 
+const upperFirstLetter = (value) => {
+  return String(value)?.charAt(0)?.toUpperCase() + String(value)?.slice(1);
+};
+
 module.exports = {
   delay,
   shuffleArray,
@@ -108,6 +112,7 @@ module.exports = {
   extractNumbers,
   getRandomNumber,
   getLetterByIndex,
+  upperFirstLetter,
   pickAllowedFields,
   countExactMatches,
   roundToNearestHalf,

@@ -1,9 +1,11 @@
 // Models
 const User = require("../models/User");
-const Teacher = require("../models/User");
 
 // Helpers
 const { getRandomNumber, extractNumbers } = require("../utils/helpers");
+
+// Jobs
+const { scheduleTeacherContentTransfer } = require("../jobs/teacherJobs");
 
 // Create teacher
 const createTeacher = async (req, res, next) => {
@@ -118,7 +120,7 @@ const getTeacherById = async (req, res, next) => {
   if (userRole === "supervisor") filter.supervisor = userId;
 
   try {
-    const teacher = await Teacher.findOne(filter)
+    const teacher = await User.findOne(filter)
       .populate("avatar")
       .select("-__v -password -balance -chatId -updatedAt");
 
@@ -158,7 +160,7 @@ const updateTeacher = async (req, res, next) => {
       });
     }
 
-    const updated = await Teacher.findOneAndUpdate(
+    const updated = await User.findOneAndUpdate(
       { _id: id, createdBy },
       updates,
       { new: true }
@@ -174,6 +176,36 @@ const updateTeacher = async (req, res, next) => {
       teacher: updated,
       code: "teacherUpdated",
       message: "Teacher muvaffaqiyatli yangilandi",
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Update teacher
+const deleteTeacher = async (req, res, next) => {
+  const { id } = req.params;
+  const supervisorId = req.user.id;
+
+  try {
+    const deleted = await User.findOneAndDelete({
+      _id: id,
+      supervisor: supervisorId,
+    }).select("-password -chatId -__v");
+
+    if (!deleted) {
+      return res.status(404).json({
+        code: "teacherNotFound",
+        message: "Ustoz topilmadi",
+      });
+    }
+
+    await scheduleTeacherContentTransfer(id, supervisorId);
+
+    res.json({
+      teacher: deleted,
+      code: "teacherDeleted",
+      message: "Ustoz o'chirildi",
     });
   } catch (err) {
     next(err);
@@ -214,6 +246,7 @@ module.exports = {
   getTeachers,
   createTeacher,
   updateTeacher,
+  deleteTeacher,
   getTeacherById,
   updateTeacherPermissions,
 };

@@ -6,6 +6,7 @@ const {
   getTeachers,
   createTeacher,
   updateTeacher,
+  deleteTeacher,
   getTeacherById,
   updateTeacherPermissions,
 } = require("../controllers/teachers.controller");
@@ -65,6 +66,19 @@ router.put(
   roleCheck(["supervisor"]),
   validateId("id"),
   updateTeacherPermissions
+);
+
+/**
+ * DELETE /teachers/:id
+ * Description: Delete teacher (soft delete)
+ * Access: Supervisor
+ */
+router.delete(
+  "/:id",
+  auth,
+  roleCheck(["supervisor"]),
+  validateId("id"),
+  deleteTeacher
 );
 
 module.exports = router;

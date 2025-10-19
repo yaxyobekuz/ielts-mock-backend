@@ -107,27 +107,29 @@ const getTemplates = async (req, res, next) => {
       $or: [{ isDeleted: false }, { isDeleted: { $exists: false } }],
     };
 
-    const totalCount = await Template.countDocuments(filter);
-    const templates = await Template.find(filter)
-      .populate("banner")
-      .sort({ createdAt: -1 })
-      .select("-__v -images -createdBy")
-      .skip(skip)
-      .limit(limit);
+    const [templates, total] = await Promise.all([
+      Template.find(filter)
+        .populate("banner")
+        .sort({ createdAt: -1 })
+        .select("-__v -images -createdBy")
+        .skip(skip)
+        .limit(limit),
+      Template.countDocuments(filter),
+    ]);
 
-    const totalPages = Math.ceil(totalCount / limit);
+    const totalPages = Math.ceil(total / limit);
     const hasNextPage = page < totalPages;
     const hasPrevPage = page > 1;
 
     res.json({
       templates,
       code: "templatesFetched",
-      message: "Shablonlar muvaffaqiyatli olindi",
+      message: "Shablonlar olindi",
       pagination: {
         page,
         limit,
+        total,
         totalPages,
-        totalCount,
         hasNextPage,
         hasPrevPage,
       },

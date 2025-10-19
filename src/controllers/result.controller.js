@@ -190,15 +190,17 @@ const getResults = async (req, res, next) => {
   else if (userRole === "supervisor") filter.supervisor = userId;
 
   try {
-    const totalCount = await Result.countDocuments(filter);
-    const results = await Result.find(filter)
-      .populate(populate)
-      .sort({ createdAt: -1 })
-      .select("-teacher -supervisor -createdBy -__v")
-      .skip(skip)
-      .limit(limit);
+    const [results, total] = await Promise.all([
+      Result.find(filter)
+        .populate(populate)
+        .sort({ createdAt: -1 })
+        .select("-teacher -supervisor -createdBy -__v")
+        .skip(skip)
+        .limit(limit),
+      Result.countDocuments(filter),
+    ]);
 
-    const totalPages = Math.ceil(totalCount / limit);
+    const totalPages = Math.ceil(total / limit);
     const hasNextPage = page < totalPages;
     const hasPrevPage = page > 1;
 
@@ -208,8 +210,8 @@ const getResults = async (req, res, next) => {
       pagination: {
         page,
         limit,
+        total,
         totalPages,
-        totalCount,
         hasNextPage,
         hasPrevPage,
       },

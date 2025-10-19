@@ -60,7 +60,7 @@ const createTeacher = async (req, res, next) => {
     res.status(201).json({
       teacher,
       code: "teacherCreated",
-      message: "Yangi ustoz muvaffaqiyatli yaratildi",
+      message: "Yangi ustoz yaratildi",
     });
   } catch (err) {
     next(err);
@@ -80,27 +80,29 @@ const getTeachers = async (req, res, next) => {
     let filter = {};
     if (userRole === "supervisor") filter.supervisor = supervisorId;
 
-    const totalCount = await User.countDocuments(filter);
-    const teachers = await User.find(filter)
-      .populate("avatar")
-      .select("-__v -password -balance -chatId")
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit);
+    const [teachers, total] = await Promise.all([
+      User.find(filter)
+        .populate("avatar")
+        .select("-__v -password -balance -chatId")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      User.countDocuments(filter),
+    ]);
 
-    const totalPages = Math.ceil(totalCount / limit);
+    const totalPages = Math.ceil(total / limit);
     const hasNextPage = page < totalPages;
     const hasPrevPage = page > 1;
 
     res.json({
       teachers,
       code: "teachersFetched",
-      message: "Ustozlar muvaffaqiyatli olindi",
+      message: "Ustozlar olindi",
       pagination: {
         page,
         limit,
+        total,
         totalPages,
-        totalCount,
         hasNextPage,
         hasPrevPage,
       },
@@ -175,7 +177,7 @@ const updateTeacher = async (req, res, next) => {
     res.json({
       teacher: updated,
       code: "teacherUpdated",
-      message: "Teacher muvaffaqiyatli yangilandi",
+      message: "Teacher yangilandi",
     });
   } catch (err) {
     next(err);

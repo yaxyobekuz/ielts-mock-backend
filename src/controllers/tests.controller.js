@@ -78,25 +78,51 @@ const createTest = async (req, res, next) => {
 // Get tests
 const getTests = async (req, res, next) => {
   const user = req.user;
-  const { mine } = req.query;
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const search = req.query.search?.trim() || "";
 
   // Filter
   let filter = { isDeleted: false };
   if (user.role === "supervisor") filter.supervisor = user._id;
   else if (user.role === "teacher") filter.createdBy = user._id;
 
+  // Search by title
+  if (search) {
+    filter.title = { $regex: search, $options: "i" };
+  }
+
   try {
-    const tests = await Test.find(filter)
-      .populate("createdBy", "firstName lastName")
-      .select(
-        "title totalSubmissions createdAt isCopied isTemplate isTemplated template totalParts"
-      )
-      .sort({ createdAt: -1 });
+    const skip = (page - 1) * limit;
+
+    const [tests, total] = await Promise.all([
+      Test.find(filter)
+        .populate("createdBy", "firstName lastName")
+        .select(
+          "title totalSubmissions createdAt isCopied isTemplate isTemplated template totalParts"
+        )
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      Test.countDocuments(filter),
+    ]);
+
+    const totalPages = Math.ceil(total / limit);
+    const hasNextPage = page < totalPages;
+    const hasPrevPage = page > 1;
 
     res.json({
       tests,
       code: "testsFetched",
       message: "Testlar olindi",
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages,
+        hasNextPage,
+        hasPrevPage,
+      },
     });
   } catch (err) {
     next(err);

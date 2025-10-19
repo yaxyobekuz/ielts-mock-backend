@@ -169,6 +169,11 @@ const getResults = async (req, res, next) => {
   const { _id: userId, role: userRole } = req.user;
   const populateTest = req.query.populateTest === "true";
 
+  // Pagination
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 20;
+  const skip = (page - 1) * limit;
+
   let populate = {
     path: "student",
     populate: "avatar",
@@ -185,12 +190,30 @@ const getResults = async (req, res, next) => {
   else if (userRole === "supervisor") filter.supervisor = userId;
 
   try {
+    const totalCount = await Result.countDocuments(filter);
     const results = await Result.find(filter)
       .populate(populate)
       .sort({ createdAt: -1 })
-      .select("-teacher -supervisor -createdBy -__v");
+      .select("-teacher -supervisor -createdBy -__v")
+      .skip(skip)
+      .limit(limit);
 
-    res.json({ code: "resultsFetched", results });
+    const totalPages = Math.ceil(totalCount / limit);
+    const hasNextPage = page < totalPages;
+    const hasPrevPage = page > 1;
+
+    res.json({
+      results,
+      code: "resultsFetched",
+      pagination: {
+        page,
+        limit,
+        totalPages,
+        totalCount,
+        hasNextPage,
+        hasPrevPage,
+      },
+    });
   } catch (err) {
     next(err);
   }

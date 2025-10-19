@@ -97,18 +97,40 @@ const createTemplate = async (req, res, next) => {
 
 // Get templates
 const getTemplates = async (req, res, next) => {
+  // Pagination
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 20;
+  const skip = (page - 1) * limit;
+
   try {
-    const templates = await Template.find({
+    const filter = {
       $or: [{ isDeleted: false }, { isDeleted: { $exists: false } }],
-    })
+    };
+
+    const totalCount = await Template.countDocuments(filter);
+    const templates = await Template.find(filter)
       .populate("banner")
       .sort({ createdAt: -1 })
-      .select("-__v -images -createdBy");
+      .select("-__v -images -createdBy")
+      .skip(skip)
+      .limit(limit);
+
+    const totalPages = Math.ceil(totalCount / limit);
+    const hasNextPage = page < totalPages;
+    const hasPrevPage = page > 1;
 
     res.json({
       templates,
       code: "templatesFetched",
       message: "Shablonlar muvaffaqiyatli olindi",
+      pagination: {
+        page,
+        limit,
+        totalPages,
+        totalCount,
+        hasNextPage,
+        hasPrevPage,
+      },
     });
   } catch (err) {
     next(err);

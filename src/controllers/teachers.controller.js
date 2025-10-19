@@ -69,19 +69,39 @@ const createTeacher = async (req, res, next) => {
 const getTeachers = async (req, res, next) => {
   const { _id: supervisorId, role: userRole } = req.user;
 
+  // Pagination
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 20;
+  const skip = (page - 1) * limit;
+
   try {
     let filter = {};
     if (userRole === "supervisor") filter.supervisor = supervisorId;
 
+    const totalCount = await User.countDocuments(filter);
     const teachers = await User.find(filter)
       .populate("avatar")
       .select("-__v -password -balance -chatId")
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const totalPages = Math.ceil(totalCount / limit);
+    const hasNextPage = page < totalPages;
+    const hasPrevPage = page > 1;
 
     res.json({
       teachers,
       code: "teachersFetched",
       message: "Ustozlar muvaffaqiyatli olindi",
+      pagination: {
+        page,
+        limit,
+        totalPages,
+        totalCount,
+        hasNextPage,
+        hasPrevPage,
+      },
     });
   } catch (err) {
     next(err);

@@ -57,6 +57,8 @@ const createSubmission = async (req, res, next) => {
 const getSubmissions = async (req, res, next) => {
   let filter = {};
   const { _id: userId, role: userRole } = req.user;
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
   const populateTest = req.query.populateTest === "true";
   let populate = {
     path: "student",
@@ -74,12 +76,34 @@ const getSubmissions = async (req, res, next) => {
   else if (userRole === "supervisor") filter.supervisor = userId;
 
   try {
-    const submissions = await Submission.find(filter)
-      .populate(populate)
-      .sort({ createdAt: -1 })
-      .select("-answers");
+    const skip = (page - 1) * limit;
 
-    res.json({ code: "submissionsFetched", submissions });
+    const [submissions, total] = await Promise.all([
+      Submission.find(filter)
+        .populate(populate)
+        .sort({ createdAt: -1 })
+        .select("-answers")
+        .skip(skip)
+        .limit(limit),
+      Submission.countDocuments(filter),
+    ]);
+
+    const totalPages = Math.ceil(total / limit);
+    const hasNextPage = page < totalPages;
+    const hasPrevPage = page > 1;
+
+    res.json({
+      submissions,
+      code: "submissionsFetched",
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages,
+        hasNextPage,
+        hasPrevPage,
+      },
+    });
   } catch (err) {
     next(err);
   }

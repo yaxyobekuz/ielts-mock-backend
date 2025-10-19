@@ -1,11 +1,13 @@
 require("dotenv").config();
 const { app } = require("./src/start");
 const connectDB = require("./src/config/db");
+const { startAgenda } = require("./src/jobs");
 
 const PORT = process.env.PORT || 4000;
 
 (async () => {
   await connectDB();
+  await startAgenda();
   require("./src/start/routes");
 
   app.listen(PORT, () => {

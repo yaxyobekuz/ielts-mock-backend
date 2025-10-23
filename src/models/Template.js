@@ -15,7 +15,7 @@ const Template = new mongoose.Schema(
       type: String,
       required: true,
       default: "teacher",
-      enum: ["teacher", "cambridge"],
+      enum: ["custom", "prediction", "cambridge"],
     },
     images: [
       {

@@ -16,6 +16,7 @@ const {
 
 // Multer
 const { upload } = require("../utils/multer.js");
+const multer = require("multer");
 
 // Middlewares
 const validateId = require("../middlewares/validateId");

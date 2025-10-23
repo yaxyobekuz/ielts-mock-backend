@@ -14,12 +14,6 @@ const createTemplate = async (req, res, next) => {
   const { _id: userId, role: userRole } = req.user;
   const { title, description, testId, type } = req.body;
 
-  const templateType = (() => {
-    if (["supervisor", "teacher"].includes(userRole)) return "teacher";
-    if (["cambridge"].includes(type)) return type;
-    return null;
-  })();
-
   if (
     !images?.length ||
     !title?.trim()?.length ||
@@ -31,10 +25,10 @@ const createTemplate = async (req, res, next) => {
     });
   }
 
-  if (!templateType) {
+  if (!type) {
     return res.status(400).json({
       code: "invalidType",
-      message: "Tur noto'g'ri yoki kiritilmadi",
+      message: "Tur talab qilinadi",
     });
   }
 
@@ -67,11 +61,11 @@ const createTemplate = async (req, res, next) => {
 
     // Create template
     const template = await Template.create({
+      type,
       title,
       description,
       test: testId,
       createdBy: userId,
-      type: templateType,
       banner: uploadedBanner,
       images: uploadedImages.map((img) => img._id),
     });

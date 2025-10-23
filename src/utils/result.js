@@ -76,8 +76,18 @@ const countCorrectAnswers = (answers, correctAnswers) => {
         }
       } else {
         const answer = answers[key]?.trim()?.toLowerCase();
-        const correctAnswer = correctAnswers[key]?.trim()?.toLowerCase();
-        if (answer === correctAnswer) count++;
+        
+        // Check if correctAnswers[key] is an array of variants
+        if (Array.isArray(correctAnswers[key])) {
+          const isCorrect = correctAnswers[key].some(
+            variant => variant?.trim()?.toLowerCase() === answer
+          );
+          if (isCorrect) count++;
+        } else {
+          // Fallback to single answer format
+          const correctAnswer = correctAnswers[key]?.trim()?.toLowerCase();
+          if (answer === correctAnswer) count++;
+        }
       }
     }
   }

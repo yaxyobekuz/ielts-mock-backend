@@ -2,7 +2,7 @@ const Test = require("../models/Test");
 const { getLetterByIndex } = require("./helpers");
 
 const extractSectionAnswers = (
-  { type, groups, answers, options, questionsCount, grid },
+  { type, groups, answers, textAnswers, options, questionsCount, grid },
   initialQuestionNumber
 ) => {
   let correctAnswers = {};
@@ -11,8 +11,15 @@ const extractSectionAnswers = (
   // Text
   if (type === "text") {
     Array.from({ length: questionsCount }, (_, index) => {
-      correctAnswers[questionNumber] =
-        answers[index]?.text?.trim()?.toLowerCase() || "";
+      // Use textAnswers if available, otherwise fallback to answers
+      if (textAnswers && textAnswers[index]) {
+        correctAnswers[questionNumber] = textAnswers[index]
+          .map(variant => variant?.trim()?.toLowerCase())
+          .filter(Boolean);
+      } else {
+        correctAnswers[questionNumber] =
+          answers[index]?.text?.trim()?.toLowerCase() || "";
+      }
 
       questionNumber++;
     });

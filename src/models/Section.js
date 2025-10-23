@@ -51,6 +51,9 @@ const Section = new mongoose.Schema(
     text: { type: String },
     answers: [Answer],
 
+    // Multiple options per answer: [["option1", "option2"], ["..."]]
+    textAnswers: [[{ type: String }]],
+
     // radio-group
     groups: [Group],
 

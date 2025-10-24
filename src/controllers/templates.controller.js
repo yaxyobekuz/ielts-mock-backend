@@ -92,6 +92,7 @@ const createTemplate = async (req, res, next) => {
 // Get templates
 const getTemplates = async (req, res, next) => {
   // Pagination
+  const type = req.query.type;
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 20;
   const skip = (page - 1) * limit;
@@ -100,6 +101,9 @@ const getTemplates = async (req, res, next) => {
     const filter = {
       $or: [{ isDeleted: false }, { isDeleted: { $exists: false } }],
     };
+
+    // Add type filter if provided
+    if (type && type !== "all") filter.type = type;
 
     const [templates, total] = await Promise.all([
       Template.find(filter)

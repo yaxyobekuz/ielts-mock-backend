@@ -168,6 +168,7 @@ const getResults = async (req, res, next) => {
   let filter = {};
   const { _id: userId, role: userRole } = req.user;
   const populateTest = req.query.populateTest === "true";
+  const { linkId, testId } = req.query;
 
   // Pagination
   const page = parseInt(req.query.page) || 1;
@@ -183,6 +184,10 @@ const getResults = async (req, res, next) => {
   if (populateTest) {
     populate = { path: "test", select: "title description" };
   }
+
+  // Filter by linkId or testId if provided
+  if (linkId) filter.link = linkId;
+  if (testId) filter.test = testId;
 
   // Filter
   if (userRole === "teacher") filter.teacher = userId;

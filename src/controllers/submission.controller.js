@@ -59,6 +59,7 @@ const getSubmissions = async (req, res, next) => {
   const { _id: userId, role: userRole } = req.user;
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 10;
+  const { linkId, testId } = req.query;
   const populateTest = req.query.populateTest === "true";
   let populate = {
     path: "student",
@@ -69,6 +70,10 @@ const getSubmissions = async (req, res, next) => {
   if (populateTest) {
     populate = { path: "test", select: "title description" };
   }
+
+  // Filter by linkId or testId if provided
+  if (linkId) filter.link = linkId;
+  if (testId) filter.test = testId;
 
   // Filter by user role
   if (userRole === "teacher") filter.teacher = userId;

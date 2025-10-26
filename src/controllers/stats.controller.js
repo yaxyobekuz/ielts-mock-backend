@@ -1,451 +1,279 @@
-const mongoose = require("mongoose");
+const Stats = require("../models/Stats");
 
-// Models
-const User = require("../models/User");
-const Test = require("../models/Test");
-const Result = require("../models/Result");
-const Submission = require("../models/Submission");
-
-// helper date range
-const getDateRange = (period, from, to) => {
-  const now = new Date();
-  switch (period) {
-    case "today": {
-      const start = new Date(now);
-      start.setHours(0, 0, 0, 0);
-      return { startDate: start, endDate: now };
-    }
-    case "week": {
-      const start = new Date(now);
-      // start of week (Sunday)
-      start.setDate(now.getDate() - now.getDay());
-      start.setHours(0, 0, 0, 0);
-      return { startDate: start, endDate: now };
-    }
-    case "month": {
-      const start = new Date(now.getFullYear(), now.getMonth(), 0 + 1);
-      start.setHours(0, 0, 0, 0);
-      return { startDate: start, endDate: now };
-    }
-    case "custom":
-      return { startDate: new Date(from), endDate: new Date(to) };
-    default: {
-      const start = new Date(now);
-      start.setHours(0, 0, 0, 0);
-      return { startDate: start, endDate: now };
-    }
-  }
-};
-
-// choose granularity and $dateToString format
-const chooseGranularity = (period, startDate, endDate) => {
-  const ms = endDate - startDate;
-  const days = Math.ceil(ms / (1000 * 60 * 60 * 24));
-
-  if (period === "today") return { unit: "hour", format: "%Y-%m-%dT%H:00:00Z" };
-  if (period === "week") return { unit: "day", format: "%Y-%m-%d" };
-  if (period === "month") return { unit: "day", format: "%Y-%m-%d" };
-
-  // custom
-  if (days <= 2) return { unit: "hour", format: "%Y-%m-%dT%H:00:00Z" };
-  if (days <= 92) return { unit: "day", format: "%Y-%m-%d" };
-  if (days <= 730) return { unit: "month", format: "%Y-%m" };
-  return { unit: "year", format: "%Y" };
-};
-
-// add time helper
-const addTime = (date, unit, amount = 1) => {
-  const d = new Date(date);
-  if (unit === "hour") d.setHours(d.getHours() + amount);
-  if (unit === "day") d.setDate(d.getDate() + amount);
-  if (unit === "month") d.setMonth(d.getMonth() + amount);
-  if (unit === "year") d.setFullYear(d.getFullYear() + amount);
-  return d;
-};
-
-// format bucket same way as aggregation ($dateToString with UTC)
-const formatBucket = (date, unit) => {
-  const d = new Date(date);
-  if (unit === "hour") {
-    // YYYY-MM-DDTHH:00:00Z
-    return d.toISOString().slice(0, 13) + ":00:00Z";
-  }
-  if (unit === "day") {
-    // YYYY-MM-DD
-    return d.toISOString().slice(0, 10);
-  }
-  if (unit === "month") {
-    // YYYY-MM
-    return d.toISOString().slice(0, 7);
-  }
-  if (unit === "year") {
-    return d.toISOString().slice(0, 4);
-  }
-  return d.toISOString();
-};
-
-// generate full bucket list for range
-const generateBuckets = (startDate, endDate, unit) => {
-  const buckets = [];
-  let cur = new Date(startDate);
-
-  // normalize start
-  if (unit === "hour") {
-    cur.setMinutes(0, 0, 0);
-  } else if (unit === "day") {
-    cur.setHours(0, 0, 0, 0);
-  } else if (unit === "month") {
-    cur.setDate(1);
-    cur.setHours(0, 0, 0, 0);
-  } else if (unit === "year") {
-    cur.setMonth(0, 1);
-    cur.setHours(0, 0, 0, 0);
-  }
-
-  while (cur <= endDate) {
-    buckets.push(formatBucket(cur, unit));
-    cur = addTime(cur, unit, 1);
-  }
-
-  return buckets;
-};
-
-// map agg results to simple map
-const aggToMap = (arr, valueField = "count") => {
-  const map = Object.create(null);
-  arr.forEach((r) => {
-    const key = r._id ? String(r._id) : "";
-    map[key] = r[valueField] !== undefined ? r[valueField] : r.count || 0;
-  });
-  return map;
-};
-
-// main stats controller
-const getStats = async (req, res, next) => {
-  const { period = "today", from, to } = req.query;
-  const user = req.user || {};
-  const userId = user._id ? String(user._id) : user.id;
-  const role = user.role;
+/**
+ * Get dashboard statistics for last 7 days
+ */
+const getDashboardStats = async (req, res, next) => {
+  const endDate = new Date();
+  const startDate = new Date();
+  const { _id: userId, role } = req.user;
+  startDate.setDate(startDate.getDate() - 7);
 
   try {
-    const { startDate, endDate } = getDateRange(period, from, to);
-    const { unit, format } = chooseGranularity(period, startDate, endDate);
+    const filter = { date: { $gte: startDate, $lte: endDate } };
 
-    // supervisor stats
-    if (role === "supervisor") {
-      // find teacher list
-      const teachers = await User.find({ supervisor: userId, role: "teacher" })
-        .select("_id firstName lastName")
-        .lean();
-      const teacherIds = teachers.map((t) => t._id);
+    // Add userId to the filter based on role
+    if (role === "supervisor") filter.supervisor = userId;
+    else if (role === "teacher") filter.userId = userId;
+    else filter.userId = userId;
 
-      // summary counts
-      const testsCreatedCount = await Test.countDocuments({
-        createdBy: { $in: teacherIds },
-        createdAt: { $gte: startDate, $lte: endDate },
-      });
+    const stats = await Stats.find(filter)
+      .select("date tests submissions links")
+      .sort({ date: 1 })
+      .lean();
 
-      const testsDeletedCount = await Test.countDocuments({
-        createdBy: { $in: teacherIds },
-        isDeleted: true,
-        deletedAt: { $gte: startDate, $lte: endDate },
-      });
-
-      const submissionsCount = await Submission.countDocuments({
-        supervisor: new mongoose.Types.ObjectId(userId),
-        startedAt: { $gte: startDate, $lte: endDate },
-      });
-
-      const resultsCount = await Result.countDocuments({
-        teacher: { $in: teacherIds },
-        createdAt: { $gte: startDate, $lte: endDate },
-      });
-
-      // average score across group
-      const avgRes = await Result.aggregate([
-        {
-          $match: {
-            teacher: { $in: teacherIds },
-            createdAt: { $gte: startDate, $lte: endDate },
-          },
-        },
-        {
-          $group: {
-            _id: null,
-            avgOverall: { $avg: "$overall" },
-          },
-        },
-      ]);
-      const avgScore = avgRes?.[0]?.avgOverall || 0;
-
-      // submissions time series (for supervisor group) - group by selected bucket
-      const submissionAgg = await Submission.aggregate([
-        {
-          $match: {
-            supervisor: new mongoose.Types.ObjectId(userId),
-            startedAt: { $gte: startDate, $lte: endDate },
-          },
-        },
-        {
-          $project: {
-            bucket: {
-              $dateToString: { format, date: "$startedAt", timezone: "UTC" },
-            },
-          },
-        },
-        {
-          $group: {
-            _id: "$bucket",
-            count: { $sum: 1 },
-          },
-        },
-        { $sort: { _id: 1 } },
-      ]);
-
-      const buckets = generateBuckets(startDate, endDate, unit);
-      const subMap = aggToMap(submissionAgg, "count");
-      const submissionsSeries = buckets.map((b) => ({
-        x: b,
-        y: subMap[b] || 0,
-      }));
-
-      // teacher activity breakdown (per teacher)
-      let teacherStats = [];
-      if (teacherIds.length > 0) {
-        // tests created per teacher
-        const testsCreatedAgg = await Test.aggregate([
-          {
-            $match: {
-              createdBy: { $in: teacherIds },
-              createdAt: { $gte: startDate, $lte: endDate },
-            },
-          },
-          { $group: { _id: "$createdBy", count: { $sum: 1 } } },
-        ]);
-
-        const testsDeletedAgg = await Test.aggregate([
-          {
-            $match: {
-              createdBy: { $in: teacherIds },
-              isDeleted: true,
-              deletedAt: { $gte: startDate, $lte: endDate },
-            },
-          },
-          { $group: { _id: "$createdBy", count: { $sum: 1 } } },
-        ]);
-
-        // submissions per teacher with unique students
-        const submissionsAggByTeacher = await Submission.aggregate([
-          {
-            $match: {
-              teacher: { $in: teacherIds },
-              startedAt: { $gte: startDate, $lte: endDate },
-            },
-          },
-          {
-            $group: {
-              _id: "$teacher",
-              submissionsCount: { $sum: 1 },
-              students: { $addToSet: "$student" },
-            },
-          },
-        ]);
-
-        // finished submissions per teacher
-        const finishedAggByTeacher = await Submission.aggregate([
-          {
-            $match: {
-              teacher: { $in: teacherIds },
-              finishedAt: { $gte: startDate, $lte: endDate },
-            },
-          },
-          { $group: { _id: "$teacher", finishedCount: { $sum: 1 } } },
-        ]);
-
-        // results reviewed per teacher + avg score
-        const reviewedAgg = await Result.aggregate([
-          {
-            $match: {
-              teacher: { $in: teacherIds },
-              createdAt: { $gte: startDate, $lte: endDate },
-            },
-          },
-          {
-            $group: {
-              _id: "$teacher",
-              reviewedCount: { $sum: 1 },
-              avgOverall: { $avg: "$overall" },
-            },
-          },
-        ]);
-
-        // maps
-        const testsCreatedMap = aggToMap(testsCreatedAgg, "count");
-        const testsDeletedMap = aggToMap(testsDeletedAgg, "count");
-        const submissionsMap = Object.create(null);
-        submissionsAggByTeacher.forEach((r) => {
-          const k = String(r._id);
-          submissionsMap[k] = {
-            submissionsCount: r.submissionsCount || 0,
-            uniqueStudents: (r.students || []).length,
-          };
-        });
-        const finishedMap = aggToMap(finishedAggByTeacher, "finishedCount");
-        const reviewedMap = Object.create(null);
-        reviewedAgg.forEach((r) => {
-          reviewedMap[String(r._id)] = {
-            reviewedCount: r.reviewedCount || 0,
-            avgOverall: r.avgOverall || 0,
-          };
-        });
-
-        teacherStats = teachers.map((t) => {
-          const id = String(t._id);
-          const created = testsCreatedMap[id] || 0;
-          const deleted = testsDeletedMap[id] || 0;
-          const subInfo = submissionsMap[id] || {
-            submissionsCount: 0,
-            uniqueStudents: 0,
-          };
-          const finished = finishedMap[id] || 0;
-          const reviewInfo = reviewedMap[id] || {
-            reviewedCount: 0,
-            avgOverall: 0,
-          };
-          return {
-            teacherId: id,
-            name: `${t.firstName || ""} ${t.lastName || ""}`.trim(),
-            testsCreated: created,
-            testsDeleted: deleted,
-            submissionsCount: subInfo.submissionsCount,
-            finishedSubmissionsCount: finished,
-            uniqueStudents: subInfo.uniqueStudents,
-            reviewedCount: reviewInfo.reviewedCount,
-            avgScore: Number((reviewInfo.avgOverall || 0).toFixed(2)),
-          };
-        });
-      }
-
-      return res.json({
-        code: "statsFetched",
-        message: "Supervisor stats",
-        summary: {
-          testsCreatedCount,
-          testsDeletedCount,
-          submissionsCount,
-          resultsCount,
-          avgScore: Number(avgScore.toFixed(2)),
-        },
-        submissionsSeries,
-        teacherStats,
-        period,
-        startDate,
-        endDate,
+    if (stats.length === 0) {
+      return res.status(200).json({
+        code: "noData",
+        data: { summary: {}, charts: {} },
+        message: "Statistika ma'lumotlari topilmadi",
       });
     }
 
-    // teacher stats
-    if (role === "teacher") {
-      // summary
-      const testsCreatedCount = await Test.countDocuments({
-        createdBy: new mongoose.Types.ObjectId(userId),
-        createdAt: { $gte: startDate, $lte: endDate },
-      });
+    let totalActiveLinks = 0;
+    let totalTestsCreated = 0;
+    let totalSubmissionsGraded = 0;
+    let totalSubmissionsCreated = 0;
 
-      const testsDeletedCount = await Test.countDocuments({
-        createdBy: new mongoose.Types.ObjectId(userId),
-        isDeleted: true,
-        deletedAt: { $gte: startDate, $lte: endDate },
-      });
+    const chartData = stats.map((stat) => {
+      const activeLinks = stat.links?.active || 0;
+      const testsCreated = stat.tests?.created || 0;
+      const submissionsGraded = stat.submissions?.graded || 0;
+      const submissionsCreated = stat.submissions?.created || 0;
 
-      const submissionsCount = await Submission.countDocuments({
-        teacher: new mongoose.Types.ObjectId(userId),
-        startedAt: { $gte: startDate, $lte: endDate },
-      });
+      totalActiveLinks += activeLinks;
+      totalTestsCreated += testsCreated;
+      totalSubmissionsGraded += submissionsGraded;
+      totalSubmissionsCreated += submissionsCreated;
 
-      const finishedCount = await Submission.countDocuments({
-        teacher: new mongoose.Types.ObjectId(userId),
-        finishedAt: { $gte: startDate, $lte: endDate },
-      });
+      const dateKey = stat.date.toISOString().split("T")[0];
 
-      const reviewedCount = await Result.countDocuments({
-        teacher: new mongoose.Types.ObjectId(userId),
-        createdAt: { $gte: startDate, $lte: endDate },
-      });
-
-      const avgRes = await Result.aggregate([
-        {
-          $match: {
-            teacher: new mongoose.Types.ObjectId(userId),
-            createdAt: { $gte: startDate, $lte: endDate },
-          },
-        },
-        {
-          $group: {
-            _id: null,
-            avgOverall: { $avg: "$overall" },
-          },
-        },
-      ]);
-      const avgScore = avgRes?.[0]?.avgOverall || 0;
-
-      // time series for submissions by this teacher
-      const submissionAgg = await Submission.aggregate([
-        {
-          $match: {
-            teacher: new mongoose.Types.ObjectId(userId),
-            startedAt: { $gte: startDate, $lte: endDate },
-          },
-        },
-        {
-          $project: {
-            bucket: {
-              $dateToString: { format, date: "$startedAt", timezone: "UTC" },
-            },
-          },
-        },
-        {
-          $group: {
-            _id: "$bucket",
-            count: { $sum: 1 },
-          },
-        },
-        { $sort: { _id: 1 } },
-      ]);
-
-      const buckets = generateBuckets(startDate, endDate, unit);
-      const subMap = aggToMap(submissionAgg, "count");
-      const submissionsSeries = buckets.map((b) => ({
-        x: b,
-        y: subMap[b] || 0,
-      }));
-
-      return res.json({
-        code: "statsFetched",
-        message: "Teacher stats",
-        summary: {
-          testsCreatedCount,
-          testsDeletedCount,
-          submissionsCount,
-          finishedCount,
-          reviewedCount,
-          avgScore: Number(avgScore.toFixed(2)),
-        },
-        submissionsSeries,
-        period,
-        startDate,
-        endDate,
-      });
-    }
-
-    // other roles not implemented
-    return res.status(403).json({
-      code: "notImplemented",
-      message: "Stats for this role not implemented",
+      return {
+        activeLinks,
+        testsCreated,
+        date: dateKey,
+        submissionsGraded,
+        submissionsCreated,
+      };
     });
-  } catch (err) {
-    next(err);
+
+    const charts = {
+      testsCreated: chartData.map((d) => ({
+        x: d.date,
+        y: d.testsCreated,
+      })),
+      submissionsCreated: chartData.map((d) => ({
+        x: d.date,
+        y: d.submissionsCreated,
+      })),
+      submissionsGraded: chartData.map((d) => ({
+        x: d.date,
+        y: d.submissionsGraded,
+      })),
+    };
+
+    res.status(200).json({
+      code: "dashboardStatsFetched",
+      message: "Dashboard statistikasi yuklandi",
+      data: {
+        charts,
+        summary: {
+          activeLinks: totalActiveLinks,
+          testsCreated: totalTestsCreated,
+          submissionsGraded: totalSubmissionsGraded,
+          submissionsCreated: totalSubmissionsCreated,
+        },
+      },
+    });
+  } catch (error) {
+    next(error);
   }
 };
 
-module.exports = { getStats };
+/**
+ * Get detailed statistics with aggregations
+ */
+const getDetailedStats = async (req, res, next) => {
+  const { startDate: startParam, endDate: endParam } = req.query;
+
+  const { _id: userId, role } = req.user;
+  const endDate = endParam ? new Date(endParam) : new Date();
+  const startDate = startParam ? new Date(startParam) : new Date();
+
+  if (!startParam) {
+    startDate.setDate(startDate.getDate() - 7);
+  }
+
+  try {
+    const filter = { date: { $gte: startDate, $lte: endDate } };
+
+    // Add userId to the filter based on role
+    if (role === "supervisor") filter.supervisor = userId;
+    else if (role === "teacher") filter.userId = userId;
+    else filter.userId = userId;
+
+    const stats = await Stats.find(filter)
+      .select("date tests submissions results links")
+      .sort({ date: 1 })
+      .lean();
+
+    if (stats.length === 0) {
+      return res.status(200).json({
+        code: "noData",
+        data: { summary: {}, charts: {} },
+        message: "Tanlangan davr uchun statistika topilmadi",
+      });
+    }
+
+    const periodData = stats.map((stat) => {
+      const dateKey = stat.date.toISOString().split("T")[0];
+      return {
+        period: dateKey,
+        tests: {
+          created: stat.tests?.created || 0,
+          deleted: stat.tests?.deleted || 0,
+        },
+        submissions: {
+          created: stat.submissions?.created || 0,
+          graded: stat.submissions?.graded || 0,
+        },
+        results: {
+          created: stat.results?.created || 0,
+          avgOverall: stat.results?.avgOverall || 0,
+          avgReading: stat.results?.avgReading || 0,
+          avgWriting: stat.results?.avgWriting || 0,
+          avgListening: stat.results?.avgListening || 0,
+          avgSpeaking: stat.results?.avgSpeaking || 0,
+        },
+        links: {
+          active: stat.links?.active || 0,
+          created: stat.links?.created || 0,
+          visits: stat.links?.totalVisits || 0,
+          usages: stat.links?.totalUsages || 0,
+        },
+      };
+    });
+
+    const summary = periodData.reduce(
+      (acc, curr) => ({
+        tests: {
+          created: acc.tests.created + curr.tests.created,
+          deleted: acc.tests.deleted + curr.tests.deleted,
+        },
+        submissions: {
+          created: acc.submissions.created + curr.submissions.created,
+          graded: acc.submissions.graded + curr.submissions.graded,
+        },
+        results: {
+          created: acc.results.created + curr.results.created,
+          avgOverall:
+            acc.results.avgOverall + curr.results.avgOverall / stats.length,
+          avgReading:
+            acc.results.avgReading + curr.results.avgReading / stats.length,
+          avgWriting:
+            acc.results.avgWriting + curr.results.avgWriting / stats.length,
+          avgListening:
+            acc.results.avgListening + curr.results.avgListening / stats.length,
+          avgSpeaking:
+            acc.results.avgSpeaking + curr.results.avgSpeaking / stats.length,
+        },
+        links: {
+          created: acc.links.created + curr.links.created,
+          visits: acc.links.visits + curr.links.visits,
+          usages: acc.links.usages + curr.links.usages,
+        },
+      }),
+      {
+        tests: { created: 0, deleted: 0 },
+        submissions: { created: 0, graded: 0 },
+        results: {
+          created: 0,
+          avgOverall: 0,
+          avgReading: 0,
+          avgWriting: 0,
+          avgListening: 0,
+          avgSpeaking: 0,
+        },
+        links: { created: 0, visits: 0, usages: 0 },
+      }
+    );
+
+    summary.results.avgOverall = parseFloat(
+      summary.results.avgOverall.toFixed(2)
+    );
+    summary.results.avgReading = parseFloat(
+      summary.results.avgReading.toFixed(2)
+    );
+    summary.results.avgWriting = parseFloat(
+      summary.results.avgWriting.toFixed(2)
+    );
+    summary.results.avgListening = parseFloat(
+      summary.results.avgListening.toFixed(2)
+    );
+    summary.results.avgSpeaking = parseFloat(
+      summary.results.avgSpeaking.toFixed(2)
+    );
+
+    const charts = {
+      tests: {
+        created: periodData.map((p) => ({ x: p.period, y: p.tests.created })),
+        deleted: periodData.map((p) => ({ x: p.period, y: p.tests.deleted })),
+      },
+      submissions: {
+        created: periodData.map((p) => ({
+          x: p.period,
+          y: p.submissions.created,
+        })),
+        graded: periodData.map((p) => ({
+          x: p.period,
+          y: p.submissions.graded,
+        })),
+      },
+      results: {
+        avgOverall: periodData.map((p) => ({
+          x: p.period,
+          y: p.results.avgOverall,
+        })),
+        avgReading: periodData.map((p) => ({
+          x: p.period,
+          y: p.results.avgReading,
+        })),
+        avgWriting: periodData.map((p) => ({
+          x: p.period,
+          y: p.results.avgWriting,
+        })),
+        avgListening: periodData.map((p) => ({
+          x: p.period,
+          y: p.results.avgListening,
+        })),
+        avgSpeaking: periodData.map((p) => ({
+          x: p.period,
+          y: p.results.avgSpeaking,
+        })),
+      },
+      links: {
+        active: periodData.map((p) => ({ x: p.period, y: p.links.active })),
+        visits: periodData.map((p) => ({ x: p.period, y: p.links.visits })),
+        usages: periodData.map((p) => ({ x: p.period, y: p.links.usages })),
+      },
+    };
+
+    res.status(200).json({
+      code: "detailedStatsFetched",
+      message: "Batafsil statistika yuklandi",
+      data: {
+        charts,
+        summary,
+        dateRange: {
+          end: endDate.toISOString().split("T")[0],
+          start: startDate.toISOString().split("T")[0],
+          days: Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)),
+        },
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = { getDashboardStats, getDetailedStats };

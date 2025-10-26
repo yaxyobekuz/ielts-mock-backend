@@ -68,6 +68,7 @@ const Stats = new mongoose.Schema(
       { role: 1, date: -1 },
       { userId: 1, date: -1 },
       { supervisor: 1, date: -1 },
+      { userId: 1, date: 1, unique: true }, // Prevent duplicate stats for same user and date
     ],
   }
 );

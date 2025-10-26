@@ -173,24 +173,14 @@ const collectAllStats = async (date = new Date()) => {
     try {
       const stats = await collectStatsForUser(user._id, startOfDay);
 
-      // Update existing statistics or create new one
-      const existingStat = await Stats.findOne({
-        userId: user._id,
-        date: startOfDay,
-      });
+      // Use findOneAndUpdate with upsert to prevent duplicate creation
+      const result = await Stats.findOneAndUpdate(
+        { userId: user._id, date: startOfDay },
+        { $set: stats },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
 
-      let result;
-      if (existingStat) {
-        Object.assign(existingStat, stats);
-        await existingStat.save();
-        result = existingStat;
-        console.log(`✅ ${user.firstName} - statistics updated`);
-      } else {
-        const newStat = await Stats.create(stats);
-        result = newStat;
-        console.log(`✅ ${user.firstName} - statistics created`);
-      }
-
+      console.log(`✅ ${user.firstName} - statistics ${result.isNew ? 'created' : 'updated'}`);
       return result;
     } catch (error) {
       console.error(`❌ ${user.firstName} - error:`, error.message);

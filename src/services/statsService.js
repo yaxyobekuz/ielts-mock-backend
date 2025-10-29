@@ -72,7 +72,9 @@ const collectStatsForUser = async (userId, date) => {
   ]);
 
   // Test statistics
-  const createdTests = allTests.filter((t) => !t.isDeleted);
+  const createdTests = allTests.filter(
+    (t) => t.createdAt >= startOfDay && t.createdAt <= endOfDay
+  );
   const deletedTests = allTests.filter((t) => t.isDeleted);
   stats.tests = {
     created: createdTests.length,
@@ -168,8 +170,9 @@ const collectAllStats = async (date = new Date()) => {
 
   console.log(`📊 Collecting statistics for ${eligibleUsers.length} users...`);
 
-  // Parallel collection with Promise.all
-  const promises = eligibleUsers.map(async (user) => {
+  // Sequential collection to prevent race conditions
+  const results = [];
+  for (const user of eligibleUsers) {
     try {
       const stats = await collectStatsForUser(user._id, startOfDay);
 
@@ -180,16 +183,23 @@ const collectAllStats = async (date = new Date()) => {
         { upsert: true, new: true, setDefaultsOnInsert: true }
       );
 
-      console.log(`✅ ${user.firstName} - statistics ${result.isNew ? 'created' : 'updated'}`);
-      return result;
+      console.log(
+        `✅ ${user.firstName} - statistics ${result ? "updated" : "created"}`
+      );
+      results.push(result);
     } catch (error) {
-      console.error(`❌ ${user.firstName} - error:`, error.message);
-      return null;
+      if (error.code === 11000) {
+        // Duplicate key error - entry already exists, skip
+        console.log(
+          `⚠️  ${user.firstName} - statistics already exist, skipping`
+        );
+      } else {
+        console.error(`❌ ${user.firstName} - error:`, error.message);
+      }
     }
-  });
+  }
 
-  const results = await Promise.all(promises);
-  return results.filter((r) => r !== null);
+  return results;
 };
 
 /**

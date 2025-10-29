@@ -29,28 +29,25 @@ const UserStats = new mongoose.Schema(
 
     // Test Statistics
     tests: {
-      total: { type: Number, default: 0 },
-      active: { type: Number, default: 0 },
-      created: { type: Number, default: 0 },
-      deleted: { type: Number, default: 0 },
+      active: { type: Number, default: 0, required: true },
+      created: { type: Number, default: 0, required: true },
+      deleted: { type: Number, default: 0, required: true },
     },
 
     // Submission Statistics
     submissions: {
-      total: { type: Number, default: 0 },
-      active: { type: Number, default: 0 },
-      graded: { type: Number, default: 0 },
-      created: { type: Number, default: 0 },
-      deleted: { type: Number, default: 0 },
-      ungraded: { type: Number, default: 0 },
+      active: { type: Number, default: 0, required: true },
+      graded: { type: Number, default: 0, required: true },
+      created: { type: Number, default: 0, required: true },
+      deleted: { type: Number, default: 0, required: true },
+      ungraded: { type: Number, default: 0, required: true },
     },
 
     // Result Statistics
     results: {
-      total: { type: Number, default: 0 },
-      active: { type: Number, default: 0 },
-      created: { type: Number, default: 0 },
-      deleted: { type: Number, default: 0 },
+      active: { type: Number, default: 0, required: true },
+      created: { type: Number, default: 0, required: true },
+      deleted: { type: Number, default: 0, required: true },
       avgScore: {
         overall: { type: Number, default: 0, min: 0, max: 9 },
         reading: { type: Number, default: 0, min: 0, max: 9 },
@@ -62,20 +59,18 @@ const UserStats = new mongoose.Schema(
 
     // Link Statistics
     links: {
-      total: { type: Number, default: 0 },
-      active: { type: Number, default: 0 },
-      created: { type: Number, default: 0 },
-      deleted: { type: Number, default: 0 },
-      totalVisits: { type: Number, default: 0 },
-      totalUsages: { type: Number, default: 0 },
+      active: { type: Number, default: 0, required: true },
+      created: { type: Number, default: 0, required: true },
+      deleted: { type: Number, default: 0, required: true },
+      totalVisits: { type: Number, default: 0, required: true },
+      totalUsages: { type: Number, default: 0, required: true },
     },
 
     // Template Statistics
     templates: {
-      total: { type: Number, default: 0 },
-      active: { type: Number, default: 0 },
-      created: { type: Number, default: 0 },
-      deleted: { type: Number, default: 0 },
+      active: { type: Number, default: 0, required: true },
+      created: { type: Number, default: 0, required: true },
+      deleted: { type: Number, default: 0, required: true },
     },
   },
   { timestamps: true }

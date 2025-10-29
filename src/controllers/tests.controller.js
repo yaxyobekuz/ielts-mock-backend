@@ -1,3 +1,9 @@
+// Stats jobs
+const {
+  scheduleStatsUpdate,
+  scheduleUserStatsUpdate,
+} = require("../jobs/statsJobs");
+
 // Mongoose
 const mongoose = require("mongoose");
 
@@ -59,6 +65,20 @@ const createTest = async (req, res, next) => {
       parts: [writingPart1._id, writingPart2._id],
     };
     const savedTest = await test.save();
+
+    // Schedule stats update for teacher and supervisor
+    const { _id, role, supervisor } = req.user;
+    const statsUpdate = { "tests.created": 1 };
+    const userStatsUpdate = { "tests.active": 1, "tests.created": 1 };
+
+    await scheduleUserStatsUpdate(_id, userStatsUpdate);
+    await scheduleStatsUpdate(_id, role, supervisor, statsUpdate);
+
+    // If teacher, update supervisor stats too
+    if (role === "teacher" && supervisor) {
+      await scheduleUserStatsUpdate(supervisor, userStatsUpdate);
+      await scheduleStatsUpdate(supervisor, "supervisor", null, statsUpdate);
+    }
 
     res.status(201).json({
       code: "testCreated",
@@ -399,15 +419,8 @@ const deleteTest = async (req, res, next) => {
 
   try {
     const deleted = await Test.findOneAndUpdate(
-      {
-        _id: id,
-        createdBy: userId,
-      },
-      {
-        isDeleted: true,
-        deletedBy: userId,
-        deletedAt: Date.now(),
-      }
+      { _id: id, createdBy: userId },
+      { isDeleted: true, deletedBy: userId, deletedAt: Date.now() }
     );
 
     if (!deleted) {
@@ -422,6 +435,20 @@ const deleteTest = async (req, res, next) => {
         { _id: deleted.template },
         { isDeleted: true, deletedBy: userId, deletedAt: Date.now() }
       );
+    }
+
+    // Schedule stats update for teacher and supervisor
+    const { _id, role, supervisor } = req.user;
+    const statsUpdate = { "tests.deleted": 1 };
+    const userStatsUpdate = { "tests.active": -1, "tests.deleted": 1 };
+
+    await scheduleUserStatsUpdate(_id, userStatsUpdate);
+    await scheduleStatsUpdate(_id, role, supervisor, statsUpdate);
+
+    // If teacher, update supervisor stats too
+    if (role === "teacher" && supervisor) {
+      await scheduleUserStatsUpdate(supervisor, userStatsUpdate);
+      await scheduleStatsUpdate(supervisor, "supervisor", null, statsUpdate);
     }
 
     res.json({

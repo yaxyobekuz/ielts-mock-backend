@@ -1,3 +1,9 @@
+// Stats jobs
+const {
+  scheduleStatsUpdate,
+  scheduleUserStatsUpdate,
+} = require("../jobs/statsJobs");
+
 // Models
 const Part = require("../models/Part");
 const Test = require("../models/Test");
@@ -78,6 +84,25 @@ const createTemplate = async (req, res, next) => {
     // Assign images
     const formattedTemplate = { ...template.toObject() };
     formattedTemplate.images = uploadedImages;
+
+    // Schedule stats update for teacher and supervisor
+    const { _id, role } = req.user;
+    const statsUpdate = { "templates.created": 1 };
+    const userStatsUpdate = { "templates.active": 1, "templates.created": 1 };
+
+    await scheduleUserStatsUpdate(_id, userStatsUpdate);
+    await scheduleStatsUpdate(_id, role, test.supervisor, statsUpdate);
+
+    // If teacher, update supervisor stats too
+    if (role === "teacher" && test.supervisor) {
+      await scheduleUserStatsUpdate(test.supervisor, userStatsUpdate);
+      await scheduleStatsUpdate(
+        test.supervisor,
+        "supervisor",
+        null,
+        statsUpdate
+      );
+    }
 
     res.status(201).json({
       code: "templateCreated",
@@ -246,6 +271,20 @@ const deleteTemplate = async (req, res, next) => {
         code: "templateNotFound",
         message: "Template topilmadi",
       });
+    }
+
+    // Schedule stats update for teacher and supervisor
+    const { _id, role, supervisor } = req.user;
+    const statsUpdate = { "templates.deleted": 1 };
+    const userStatsUpdate = { "templates.active": -1, "templates.deleted": 1 };
+
+    await scheduleUserStatsUpdate(_id, userStatsUpdate);
+    await scheduleStatsUpdate(_id, role, supervisor, statsUpdate);
+
+    // If teacher, update supervisor stats too
+    if (role === "teacher" && supervisor) {
+      await scheduleUserStatsUpdate(supervisor, userStatsUpdate);
+      await scheduleStatsUpdate(supervisor, "supervisor", null, statsUpdate);
     }
 
     res.json({

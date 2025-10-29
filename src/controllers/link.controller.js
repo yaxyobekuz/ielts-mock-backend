@@ -1,9 +1,16 @@
+// Stats jobs
+const {
+  scheduleStatsUpdate,
+  scheduleUserStatsUpdate,
+} = require("../jobs/statsJobs");
+
 // Mongoose
 const mongoose = require("mongoose");
 
 // Models
 const Link = require("../models/Link");
 const Test = require("../models/Test");
+const User = require("../models/User");
 
 // Helpers
 const { shuffleArray, pickAllowedFields } = require("../utils/helpers");
@@ -91,6 +98,20 @@ const createLink = async (req, res, next) => {
       supervisor: supervisor || createdBy,
     });
 
+    // Schedule stats update for teacher and supervisor
+    const { _id, role } = req.user;
+    const statsUpdate = { "links.created": 1 };
+    const userStatsUpdate = { "links.active": 1, "links.created": 1 };
+
+    await scheduleUserStatsUpdate(_id, userStatsUpdate);
+    await scheduleStatsUpdate(_id, role, supervisor, statsUpdate);
+
+    // If teacher, update supervisor stats too
+    if (role === "teacher" && supervisor) {
+      await scheduleUserStatsUpdate(supervisor, userStatsUpdate);
+      await scheduleStatsUpdate(supervisor, "supervisor", null, statsUpdate);
+    }
+
     res.status(201).json({
       link,
       code: "linkCreated",
@@ -155,6 +176,20 @@ const deleteLink = async (req, res, next) => {
         code: "linkNotFound",
         message: "Havola topilmadi",
       });
+    }
+
+    // Schedule stats update for teacher and supervisor
+    const { _id, role, supervisor } = req.user;
+    const statsUpdate = { "links.deleted": 1 };
+    const userStatsUpdate = { "links.active": -1, "links.deleted": 1 };
+
+    await scheduleUserStatsUpdate(_id, userStatsUpdate);
+    await scheduleStatsUpdate(_id, role, supervisor, statsUpdate);
+
+    // If teacher, update supervisor stats too
+    if (role === "teacher" && supervisor) {
+      await scheduleUserStatsUpdate(supervisor, userStatsUpdate);
+      await scheduleStatsUpdate(supervisor, "supervisor", null, statsUpdate);
     }
 
     res.json({
@@ -325,6 +360,36 @@ const getLinkPreview = async (req, res, next) => {
     link.visitsCount = link.visitsCount + 1;
     await link.save();
 
+    // Schedule stats update for link visits
+    const teacherId = link.createdBy;
+    const supervisorId = link.supervisor;
+    const User = require("../models/User");
+    const teacher = await User.findById(teacherId).select("role");
+
+    if (teacher) {
+      const userStatsUpdate = { "links.totalVisits": 1 };
+      const statsUpdate = { "links.totalVisits": 1 };
+
+      await scheduleUserStatsUpdate(teacherId, userStatsUpdate);
+      await scheduleStatsUpdate(
+        teacherId,
+        teacher.role,
+        supervisorId,
+        statsUpdate
+      );
+
+      // If teacher, update supervisor stats too
+      if (teacher.role === "teacher" && supervisorId) {
+        await scheduleUserStatsUpdate(supervisorId, userStatsUpdate);
+        await scheduleStatsUpdate(
+          supervisorId,
+          "supervisor",
+          null,
+          statsUpdate
+        );
+      }
+    }
+
     const isAvailable = link.usedCount < link.maxUses;
 
     res.json({
@@ -367,6 +432,35 @@ const addUsage = async (req, res, next) => {
     link.usedCount += 1;
     link.usages.push({ ip, userId, userAgent });
     await link.save();
+
+    // Schedule stats update for link usage
+    const teacherId = link.createdBy;
+    const supervisorId = link.supervisor;
+    const teacher = await User.findById(teacherId).select("role");
+
+    if (teacher) {
+      const statsUpdate = { "links.totalUsages": 1 };
+      const userStatsUpdate = { "links.totalUsages": 1 };
+
+      await scheduleUserStatsUpdate(teacherId, userStatsUpdate);
+      await scheduleStatsUpdate(
+        teacherId,
+        teacher.role,
+        supervisorId,
+        statsUpdate
+      );
+
+      // If teacher, update supervisor stats too
+      if (teacher.role === "teacher" && supervisorId) {
+        await scheduleUserStatsUpdate(supervisorId, userStatsUpdate);
+        await scheduleStatsUpdate(
+          supervisorId,
+          "supervisor",
+          null,
+          statsUpdate
+        );
+      }
+    }
 
     const test = await prepareTestForUser(link.testId);
 

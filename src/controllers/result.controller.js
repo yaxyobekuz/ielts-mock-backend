@@ -1,3 +1,9 @@
+// Stats jobs
+const {
+  scheduleStatsUpdate,
+  scheduleUserStatsUpdate,
+} = require("../jobs/statsJobs");
+
 // Data
 const texts = require("../data/texts");
 
@@ -122,6 +128,33 @@ const createResult = async (req, res, next) => {
     submission.isScored = true;
     submission.result = result._id;
     await submission.save();
+
+    // Schedule stats update for teacher and supervisor
+    const { _id, role, supervisor } = req.user;
+    const userStatsUpdate = {
+      "results.active": 1,
+      "results.created": 1,
+      "submissions.graded": 1,
+      "submissions.ungraded": -1,
+    };
+    const statsUpdate = {
+      "results.created": 1,
+      "submissions.graded": 1,
+      "results.avgWriting": writingScore,
+      "results.avgSpeaking": speakingScore,
+      "results.avgOverall": teacherOverall,
+      "results.avgReading": Number(reading),
+      "results.avgListening": Number(listening),
+    };
+
+    await scheduleUserStatsUpdate(_id, userStatsUpdate);
+    await scheduleStatsUpdate(_id, role, supervisor, statsUpdate);
+
+    // If teacher, update supervisor stats too
+    if (role === "teacher" && supervisor) {
+      await scheduleUserStatsUpdate(supervisor, userStatsUpdate);
+      await scheduleStatsUpdate(supervisor, "supervisor", null, statsUpdate);
+    }
 
     res.status(201).json({
       result,

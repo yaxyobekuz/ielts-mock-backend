@@ -1,3 +1,9 @@
+// Stats jobs
+const {
+  scheduleStatsUpdate,
+  scheduleUserStatsUpdate,
+} = require("../jobs/statsJobs");
+
 // Models
 const Link = require("../models/Link");
 const Test = require("../models/Test");
@@ -43,6 +49,42 @@ const createSubmission = async (req, res, next) => {
       teacher: link.createdBy,
       supervisor: test.supervisor,
     });
+
+    // Schedule stats update for teacher and supervisor
+    const teacherId = link.createdBy;
+    const supervisorId = test.supervisor;
+
+    // Get teacher data
+    const User = require("../models/User");
+    const teacher = await User.findById(teacherId).select("role");
+
+    if (teacher) {
+      const userStatsUpdate = {
+        "submissions.active": 1,
+        "submissions.created": 1,
+        "submissions.ungraded": 1,
+      };
+      const statsUpdate = { "submissions.created": 1 };
+
+      await scheduleUserStatsUpdate(teacherId, userStatsUpdate);
+      await scheduleStatsUpdate(
+        teacherId,
+        teacher.role,
+        supervisorId,
+        statsUpdate
+      );
+
+      // If teacher, update supervisor stats too
+      if (teacher.role === "teacher" && supervisorId) {
+        await scheduleUserStatsUpdate(supervisorId, userStatsUpdate);
+        await scheduleStatsUpdate(
+          supervisorId,
+          "supervisor",
+          null,
+          statsUpdate
+        );
+      }
+    }
 
     res.status(201).json({
       code: "submissionCreated",

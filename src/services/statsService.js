@@ -73,17 +73,23 @@ const collectStatsForUser = async (userId, date) => {
 
   // Test statistics
   const createdTests = allTests.filter(
-    (t) => t.createdAt >= startOfDay && t.createdAt <= endOfDay
+    (t) => t.createdAt >= startOfDay && t.createdAt < endOfDay
   );
-  const deletedTests = allTests.filter((t) => t.isDeleted);
+  const deletedTests = allTests.filter(
+    (t) => t.isDeleted && t.deletedAt >= startOfDay && t.deletedAt < endOfDay
+  );
   stats.tests = {
     created: createdTests.length,
     deleted: deletedTests.length,
   };
 
   // Submission statistics
-  const gradedSubmissions = allSubmissions.filter((s) => s.isScored);
-  const createdSubmissions = allSubmissions.filter((s) => !s.isScored);
+  const gradedSubmissions = allSubmissions.filter(
+    (s) => s.isScored && s.scoredAt >= startOfDay && s.scoredAt < endOfDay
+  );
+  const createdSubmissions = allSubmissions.filter(
+    (s) => s.createdAt >= startOfDay && s.createdAt < endOfDay
+  );
   stats.submissions = {
     graded: gradedSubmissions.length,
     created: createdSubmissions.length,

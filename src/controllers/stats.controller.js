@@ -1,27 +1,27 @@
+// Models
 const Stats = require("../models/Stats");
+const UserStats = require("../models/UserStats");
 
 /**
  * Get dashboard statistics for last 7 days
  */
 const getDashboardStats = async (req, res, next) => {
   const endDate = new Date();
+  const userId = req.user._id;
   const startDate = new Date();
-  const { _id: userId, role } = req.user;
   startDate.setDate(startDate.getDate() - 7);
 
   try {
-    const filter = { date: { $gte: startDate, $lte: endDate } };
-
-    // Add userId to the filter based on role
-    if (role === "supervisor") filter.supervisor = userId;
-    else if (role === "teacher") filter.userId = userId;
-    else filter.userId = userId;
-
-    const stats = await Stats.find(filter)
+    // Fetch stats for the last 7 days
+    const stats = await Stats.find({
+      userId,
+      date: { $gte: startDate, $lte: endDate },
+    })
       .select("date tests submissions links")
       .sort({ date: 1 })
       .lean();
 
+    // If no stats found, return empty summary and charts
     if (stats.length === 0) {
       return res.status(200).json({
         code: "noData",
@@ -30,12 +30,18 @@ const getDashboardStats = async (req, res, next) => {
       });
     }
 
+    // Fetch user statistics
+    const userStats = await UserStats.findOne({ userId }).lean();
+
+    // Calculate totals and prepare chart data
     let totalActiveLinks = 0;
     let totalTestsCreated = 0;
     let totalSubmissionsGraded = 0;
     let totalSubmissionsCreated = 0;
 
     const chartData = stats.map((stat) => {
+      const visits = stat.links?.totalVisits || 0;
+      const usages = stat.links?.totalUsages || 0;
       const activeLinks = stat.links?.active || 0;
       const testsCreated = stat.tests?.created || 0;
       const submissionsGraded = stat.submissions?.graded || 0;
@@ -49,30 +55,31 @@ const getDashboardStats = async (req, res, next) => {
       const dateKey = stat.date.toISOString().split("T")[0];
 
       return {
-        activeLinks,
-        testsCreated,
         date: dateKey,
-        submissionsGraded,
-        submissionsCreated,
+        links: { visits, usages },
+        tests: { created: testsCreated },
+        submissions: { created: submissionsCreated },
       };
     });
 
     const charts = {
       testsCreated: chartData.map((d) => ({
         x: d.date,
-        y: d.testsCreated,
+        y: d.tests.created,
       })),
+      links: {
+        visits: chartData.map((d) => ({ x: d.date, y: d.links.visits })),
+        usages: chartData.map((d) => ({ x: d.date, y: d.links.usages })),
+      },
       submissionsCreated: chartData.map((d) => ({
         x: d.date,
-        y: d.submissionsCreated,
-      })),
-      submissionsGraded: chartData.map((d) => ({
-        x: d.date,
-        y: d.submissionsGraded,
+        y: d.submissions.created,
       })),
     };
 
+    // Return the compiled dashboard statistics
     res.status(200).json({
+      userStats,
       code: "dashboardStatsFetched",
       message: "Dashboard statistikasi yuklandi",
       data: {
@@ -105,14 +112,10 @@ const getDetailedStats = async (req, res, next) => {
   }
 
   try {
-    const filter = { date: { $gte: startDate, $lte: endDate } };
-
-    // Add userId to the filter based on role
-    if (role === "supervisor") filter.supervisor = userId;
-    else if (role === "teacher") filter.userId = userId;
-    else filter.userId = userId;
-
-    const stats = await Stats.find(filter)
+    const stats = await Stats.find({
+      userId,
+      date: { $gte: startDate, $lte: endDate },
+    })
       .select("date tests submissions results links")
       .sort({ date: 1 })
       .lean();

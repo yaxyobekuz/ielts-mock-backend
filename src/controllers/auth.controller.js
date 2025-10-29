@@ -11,6 +11,7 @@ const { getRandomNumber } = require("../utils/helpers");
 // Models
 const User = require("../models/User");
 const TgUser = require("../models/TgUser");
+const UserStats = require("../models/UserStats");
 const VerificationCode = require("../models/VerificationCode");
 
 // Send verification code via telegram bot
@@ -179,6 +180,19 @@ const verify = async (req, res, next) => {
       { isVerified: true, password },
       { new: true }
     ).select("-password");
+
+    // Create UserStats for teacher or supervisor (upsert)
+    if (user.role === "teacher" || user.role === "supervisor") {
+      await UserStats.findOneAndUpdate(
+        { userId: user._id },
+        {
+          role: user.role,
+          userId: user._id,
+          supervisor: user.supervisor || null,
+        },
+        { upsert: true, new: true }
+      );
+    }
 
     const token = generateToken(user);
 

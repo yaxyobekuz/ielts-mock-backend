@@ -21,7 +21,7 @@ const { uploadAudio } = require("../services/uploadService");
 
 // Create test
 const createTest = async (req, res, next) => {
-  const { _id: createdBy, supervisor } = req.user;
+  const { _id: createdBy, supervisor, role } = req.user;
   const { title, description = "", image = "" } = req.body;
 
   if (!title || !title.trim().length) {
@@ -67,12 +67,11 @@ const createTest = async (req, res, next) => {
     const savedTest = await test.save();
 
     // Schedule stats update for teacher and supervisor
-    const { _id, role, supervisor } = req.user;
     const statsUpdate = { "tests.created": 1 };
     const userStatsUpdate = { "tests.active": 1, "tests.created": 1 };
 
-    await scheduleUserStatsUpdate(_id, userStatsUpdate);
-    await scheduleStatsUpdate(_id, role, supervisor, statsUpdate);
+    await scheduleUserStatsUpdate(createdBy, userStatsUpdate);
+    await scheduleStatsUpdate(createdBy, role, supervisor, statsUpdate);
 
     // If teacher, update supervisor stats too
     if (role === "teacher" && supervisor) {
@@ -222,7 +221,7 @@ const getTestById = async (req, res, next) => {
 // Update test
 const updateTest = async (req, res, next) => {
   const { id } = req.params;
-  const createdBy = req.user.id;
+  const { _id: createdBy, role } = req.user;
   const allowedFields = ["title", "description"];
 
   try {
@@ -259,7 +258,7 @@ const updateTest = async (req, res, next) => {
 
 // Update module
 const updateModuleDuration = async (req, res, next) => {
-  const createdBy = req.user.id;
+  const { _id: createdBy, role } = req.user;
   const { id, module } = req.params;
   const duration = req.body.duration;
   const allowedModules = ["listening", "reading", "writing"];
@@ -300,7 +299,7 @@ const updateModuleDuration = async (req, res, next) => {
 // Add new audio to module
 const addAudioToModule = async (req, res, next) => {
   const file = req.file;
-  const userId = req.user.id;
+  const { _id: userId, role } = req.user;
   const { id, module } = req.params;
   const allowedModules = ["listening"];
 
@@ -348,7 +347,7 @@ const addAudioToModule = async (req, res, next) => {
 
 // Delete audio from module
 const deleteAudioFromModule = async (req, res, next) => {
-  const createdBy = req.user.id;
+  const { _id: createdBy, role } = req.user;
   const allowedModules = ["listening"];
   const { id, module, audioId } = req.params;
 
@@ -415,7 +414,7 @@ const deleteAudioFromModule = async (req, res, next) => {
 // Delete test
 const deleteTest = async (req, res, next) => {
   const { id } = req.params;
-  const userId = req.user.id;
+  const { _id: userId, role, supervisor } = req.user;
 
   try {
     const deleted = await Test.findOneAndUpdate(
@@ -438,12 +437,11 @@ const deleteTest = async (req, res, next) => {
     }
 
     // Schedule stats update for teacher and supervisor
-    const { _id, role, supervisor } = req.user;
     const statsUpdate = { "tests.deleted": 1 };
     const userStatsUpdate = { "tests.active": -1, "tests.deleted": 1 };
 
-    await scheduleUserStatsUpdate(_id, userStatsUpdate);
-    await scheduleStatsUpdate(_id, role, supervisor, statsUpdate);
+    await scheduleUserStatsUpdate(userId, userStatsUpdate);
+    await scheduleStatsUpdate(userId, role, supervisor, statsUpdate);
 
     // If teacher, update supervisor stats too
     if (role === "teacher" && supervisor) {

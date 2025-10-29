@@ -26,7 +26,7 @@ const { roundToNearestHalf } = require("../utils/helpers");
 
 // Create result
 const createResult = async (req, res, next) => {
-  const userId = req.user._id;
+  const { _id: userId, role } = req.user;
   const { submissionId, listening, reading } = req.body;
 
   if (isNaN(Number(listening)) || isNaN(Number(reading))) {

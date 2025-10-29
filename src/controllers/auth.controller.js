@@ -467,8 +467,10 @@ const loginWithCode = async (req, res, next) => {
 
 // Get profile
 const profile = async (req, res, next) => {
+  const { _id: userId } = req.user;
+
   try {
-    const user = await User.findById(req.user.id)
+    const user = await User.findById(userId)
       .populate("avatar")
       .select("-password");
 

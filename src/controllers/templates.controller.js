@@ -17,7 +17,7 @@ const { uploadFiles, uploadFile } = require("../services/uploadService");
 const createTemplate = async (req, res, next) => {
   const images = req.files.images;
   const banner = req.files.banner?.[0];
-  const { _id: userId, role: userRole } = req.user;
+  const { _id: userId, role: userRole, supervisor } = req.user;
   const { title, description, testId, type } = req.body;
 
   if (
@@ -86,15 +86,14 @@ const createTemplate = async (req, res, next) => {
     formattedTemplate.images = uploadedImages;
 
     // Schedule stats update for teacher and supervisor
-    const { _id, role } = req.user;
     const statsUpdate = { "templates.created": 1 };
     const userStatsUpdate = { "templates.active": 1, "templates.created": 1 };
 
-    await scheduleUserStatsUpdate(_id, userStatsUpdate);
-    await scheduleStatsUpdate(_id, role, test.supervisor, statsUpdate);
+    await scheduleUserStatsUpdate(userId, userStatsUpdate);
+    await scheduleStatsUpdate(userId, userRole, test.supervisor, statsUpdate);
 
     // If teacher, update supervisor stats too
-    if (role === "teacher" && test.supervisor) {
+    if (userRole === "teacher" && test.supervisor) {
       await scheduleUserStatsUpdate(test.supervisor, userStatsUpdate);
       await scheduleStatsUpdate(
         test.supervisor,
@@ -221,7 +220,7 @@ const getTemplateById = async (req, res, next) => {
 const updateTemplate = async (req, res, next) => {
   const updates = {};
   const { id } = req.params;
-  const createdBy = req.user.id;
+  const { _id: createdBy, role } = req.user;
   const allowedFields = ["title", "description", "image"];
 
   try {
@@ -261,10 +260,10 @@ const updateTemplate = async (req, res, next) => {
 // Delete template
 const deleteTemplate = async (req, res, next) => {
   const { id } = req.params;
-  const createdBy = req.user.id;
+  const { _id, role, supervisor } = req.user;
 
   try {
-    const deleted = await Template.findOneAndDelete({ _id: id, createdBy });
+    const deleted = await Template.findOneAndDelete({ _id: id, createdBy: _id });
 
     if (!deleted) {
       return res.status(404).json({
@@ -274,7 +273,6 @@ const deleteTemplate = async (req, res, next) => {
     }
 
     // Schedule stats update for teacher and supervisor
-    const { _id, role, supervisor } = req.user;
     const statsUpdate = { "templates.deleted": 1 };
     const userStatsUpdate = { "templates.active": -1, "templates.deleted": 1 };
 

@@ -14,7 +14,7 @@ const { getTestAnswers } = require("../utils/test");
 
 // Create a new submission
 const createSubmission = async (req, res, next) => {
-  const userId = req.user._id;
+  const { _id: userId, role } = req.user;
   const { linkId, answers } = req.body;
 
   try {

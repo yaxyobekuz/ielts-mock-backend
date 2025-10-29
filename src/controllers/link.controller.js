@@ -77,7 +77,7 @@ const prepareTestForUser = async (testId) => {
 
 // Create link
 const createLink = async (req, res, next) => {
-  const { _id: createdBy, supervisor } = req.user;
+  const { _id: createdBy, supervisor, role } = req.user;
   const { title, testId, maxUses, requireComment } = req.body;
 
   try {
@@ -99,12 +99,11 @@ const createLink = async (req, res, next) => {
     });
 
     // Schedule stats update for teacher and supervisor
-    const { _id, role } = req.user;
     const statsUpdate = { "links.created": 1 };
     const userStatsUpdate = { "links.active": 1, "links.created": 1 };
 
-    await scheduleUserStatsUpdate(_id, userStatsUpdate);
-    await scheduleStatsUpdate(_id, role, supervisor, statsUpdate);
+    await scheduleUserStatsUpdate(createdBy, userStatsUpdate);
+    await scheduleStatsUpdate(createdBy, role, supervisor, statsUpdate);
 
     // If teacher, update supervisor stats too
     if (role === "teacher" && supervisor) {
@@ -124,7 +123,7 @@ const createLink = async (req, res, next) => {
 
 // Update link
 const updateLink = async (req, res, next) => {
-  const user = req.user;
+  const { _id, role } = req.user;
   const id = req.params.id;
 
   // Pick allowed fields
@@ -133,10 +132,10 @@ const updateLink = async (req, res, next) => {
 
   // Filter
   let filter = { _id: id };
-  if (user.role === "teacher") {
-    filter.createdBy = user._id;
-  } else if (user.role === "supervisor") {
-    filter.supervisor = user._id;
+  if (role === "teacher") {
+    filter.createdBy = _id;
+  } else if (role === "supervisor") {
+    filter.supervisor = _id;
   }
 
   try {
@@ -161,13 +160,13 @@ const updateLink = async (req, res, next) => {
 
 // Delete link
 const deleteLink = async (req, res, next) => {
-  const user = req.user;
+  const { _id, role, supervisor } = req.user;
   const id = req.params.id;
 
   // Filter
   let filter = { _id: id };
-  if (user.role === "teacher") filter.createdBy = user._id;
-  else if (user.role === "supervisor") filter.supervisor = user._id;
+  if (role === "teacher") filter.createdBy = _id;
+  else if (role === "supervisor") filter.supervisor = _id;
 
   try {
     const link = await Link.findOneAndDelete(filter);
@@ -179,7 +178,6 @@ const deleteLink = async (req, res, next) => {
     }
 
     // Schedule stats update for teacher and supervisor
-    const { _id, role, supervisor } = req.user;
     const statsUpdate = { "links.deleted": 1 };
     const userStatsUpdate = { "links.active": -1, "links.deleted": 1 };
 
@@ -205,8 +203,7 @@ const deleteLink = async (req, res, next) => {
 // Get link
 const getLink = async (req, res, next) => {
   const { id } = req.params;
-  const userId = req.user._id;
-  const userRole = req.user.role;
+  const { _id: userId, role: userRole } = req.user;
 
   try {
     if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -267,8 +264,7 @@ const getLink = async (req, res, next) => {
 
 // Get links
 const getLinks = async (req, res, next) => {
-  const userId = req.user._id;
-  const userRole = req.user.role;
+  const { _id: userId, role: userRole } = req.user;
   const testId = req.query.testId;
 
   const page = parseInt(req.query.page) || 1;
@@ -337,7 +333,7 @@ const getLinks = async (req, res, next) => {
 const getLinkPreview = async (req, res, next) => {
   const ip = req.ip;
   const { id } = req.params;
-  const userId = req.user._id;
+  const { _id: userId } = req.user;
   const userAgent = req.headers["user-agent"];
 
   try {
@@ -410,7 +406,7 @@ const getLinkPreview = async (req, res, next) => {
 const addUsage = async (req, res, next) => {
   const ip = req.ip;
   const { id } = req.params;
-  const userId = req.user._id;
+  const { _id: userId } = req.user;
   const userAgent = req.headers["user-agent"];
 
   try {

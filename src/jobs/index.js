@@ -6,6 +6,10 @@ const agenda = require("../config/agenda");
 const loadJobs = () => {
   // Teacher jobs
   require("./teacherJobs");
+
+  // Stats jobs
+  require("./statsJobs");
+
   console.log("Agenda job'lari yuklandi ✅");
 };
 

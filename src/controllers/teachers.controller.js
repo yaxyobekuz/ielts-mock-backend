@@ -112,6 +112,27 @@ const getTeachers = async (req, res, next) => {
   }
 };
 
+// Get teachers name
+const getTeachersName = async (req, res, next) => {
+  const { _id: userId } = req.user;
+
+  try {
+    const teachers = await User.find({ supervisor: userId })
+      .select("firstName lastName")
+      .sort({ createdAt: -1 })
+      .limit(100)
+      .lean();
+
+    res.json({
+      teachers,
+      code: "teachersNameFetched",
+      message: "Ustozlar ismlari olindi",
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 // Get single teacher by ID
 const getTeacherById = async (req, res, next) => {
   const { id } = req.params;
@@ -250,5 +271,6 @@ module.exports = {
   updateTeacher,
   deleteTeacher,
   getTeacherById,
+  getTeachersName,
   updateTeacherPermissions,
 };

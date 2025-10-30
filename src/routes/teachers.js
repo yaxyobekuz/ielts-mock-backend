@@ -9,6 +9,7 @@ const {
   deleteTeacher,
   getTeacherById,
   updateTeacherPermissions,
+  getTeachersName,
 } = require("../controllers/teachers.controller");
 
 // Middlewares
@@ -34,6 +35,13 @@ router.get(
   validateId("id"),
   getTeacherById
 );
+
+/**
+ * GET /teachers/names/list
+ * Description: Retrieve list of teacher names
+ * Access: Supervisor
+ */
+router.get("/names/list", auth, roleCheck(["supervisor"]), getTeachersName);
 
 /**
  * POST /teachers

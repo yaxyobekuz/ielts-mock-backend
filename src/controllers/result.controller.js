@@ -1,11 +1,8 @@
-// Stats jobs
-const {
-  scheduleStatsUpdate,
-  scheduleUserStatsUpdate,
-} = require("../jobs/statsJobs");
-
 // Data
 const texts = require("../data/texts");
+
+// Agenda (job scheduler)
+const agenda = require("../config/agenda");
 
 // Models
 const Result = require("../models/Result");
@@ -26,7 +23,7 @@ const { roundToNearestHalf } = require("../utils/helpers");
 
 // Create result
 const createResult = async (req, res, next) => {
-  const { _id: userId, role } = req.user;
+  const { _id: userId } = req.user;
   const { submissionId, listening, reading } = req.body;
 
   if (isNaN(Number(listening)) || isNaN(Number(reading))) {
@@ -130,7 +127,6 @@ const createResult = async (req, res, next) => {
     await submission.save();
 
     // Schedule stats update for teacher and supervisor
-    const { _id, role, supervisor } = req.user;
     const userStatsUpdate = {
       "results.active": 1,
       "results.created": 1,
@@ -147,14 +143,17 @@ const createResult = async (req, res, next) => {
       "results.avgListening": Number(listening),
     };
 
-    await scheduleUserStatsUpdate(_id, userStatsUpdate);
-    await scheduleStatsUpdate(_id, role, supervisor, statsUpdate);
+    await agenda.now("update-user-stats", {
+      user: req.user,
+      updateData: userStatsUpdate,
+      teacherId: submission.teacher,
+    });
 
-    // If teacher, update supervisor stats too
-    if (role === "teacher" && supervisor) {
-      await scheduleUserStatsUpdate(supervisor, userStatsUpdate);
-      await scheduleStatsUpdate(supervisor, "supervisor", null, statsUpdate);
-    }
+    await agenda.now("update-stats", {
+      user: req.user,
+      updateData: statsUpdate,
+      teacherId: submission.teacher,
+    });
 
     res.status(201).json({
       result,
@@ -324,7 +323,7 @@ const deleteResult = async (req, res, next) => {
   try {
     const result = await Result.findByIdAndDelete(req.params.id);
     if (!result) return res.status(404).json({ message: "Result topilmadi" });
-    res.json({ message: "Result o‘chirildi" });
+    res.json({ message: "Result o'chirildi" });
   } catch (err) {
     next(err);
   }

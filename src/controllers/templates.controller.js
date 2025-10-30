@@ -1,12 +1,10 @@
-// Stats jobs
-const {
-  scheduleStatsUpdate,
-  scheduleUserStatsUpdate,
-} = require("../jobs/statsJobs");
+// Agenda (job scheduler)
+const agenda = require("../config/agenda");
 
 // Models
 const Part = require("../models/Part");
 const Test = require("../models/Test");
+const User = require("../models/User");
 const Section = require("../models/Section");
 const Template = require("../models/Template");
 
@@ -17,7 +15,7 @@ const { uploadFiles, uploadFile } = require("../services/uploadService");
 const createTemplate = async (req, res, next) => {
   const images = req.files.images;
   const banner = req.files.banner?.[0];
-  const { _id: userId, role: userRole, supervisor } = req.user;
+  const { _id: userId, role: userRole } = req.user;
   const { title, description, testId, type } = req.body;
 
   if (
@@ -89,19 +87,17 @@ const createTemplate = async (req, res, next) => {
     const statsUpdate = { "templates.created": 1 };
     const userStatsUpdate = { "templates.active": 1, "templates.created": 1 };
 
-    await scheduleUserStatsUpdate(userId, userStatsUpdate);
-    await scheduleStatsUpdate(userId, userRole, test.supervisor, statsUpdate);
+    await agenda.now("update-user-stats", {
+      user: req.user,
+      teacherId: test.createdBy,
+      updateData: userStatsUpdate,
+    });
 
-    // If teacher, update supervisor stats too
-    if (userRole === "teacher" && test.supervisor) {
-      await scheduleUserStatsUpdate(test.supervisor, userStatsUpdate);
-      await scheduleStatsUpdate(
-        test.supervisor,
-        "supervisor",
-        null,
-        statsUpdate
-      );
-    }
+    await agenda.now("update-stats", {
+      user: req.user,
+      updateData: statsUpdate,
+      teacherId: test.createdBy,
+    });
 
     res.status(201).json({
       code: "templateCreated",
@@ -260,10 +256,13 @@ const updateTemplate = async (req, res, next) => {
 // Delete template
 const deleteTemplate = async (req, res, next) => {
   const { id } = req.params;
-  const { _id, role, supervisor } = req.user;
+  const userId = req.user._id;
 
   try {
-    const deleted = await Template.findOneAndDelete({ _id: id, createdBy: _id });
+    const deleted = await Template.findOneAndDelete({
+      _id: id,
+      createdBy: userId,
+    });
 
     if (!deleted) {
       return res.status(404).json({
@@ -273,17 +272,21 @@ const deleteTemplate = async (req, res, next) => {
     }
 
     // Schedule stats update for teacher and supervisor
+    const test = await Test.findById(deleted.test);
     const statsUpdate = { "templates.deleted": 1 };
     const userStatsUpdate = { "templates.active": -1, "templates.deleted": 1 };
 
-    await scheduleUserStatsUpdate(_id, userStatsUpdate);
-    await scheduleStatsUpdate(_id, role, supervisor, statsUpdate);
+    await agenda.now("update-user-stats", {
+      user: req.user,
+      teacherId: test?.createdBy,
+      updateData: userStatsUpdate,
+    });
 
-    // If teacher, update supervisor stats too
-    if (role === "teacher" && supervisor) {
-      await scheduleUserStatsUpdate(supervisor, userStatsUpdate);
-      await scheduleStatsUpdate(supervisor, "supervisor", null, statsUpdate);
-    }
+    await agenda.now("update-stats", {
+      user: req.user,
+      updateData: statsUpdate,
+      teacherId: test?.createdBy,
+    });
 
     res.json({
       code: "templateDeleted",

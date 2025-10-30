@@ -414,13 +414,18 @@ const deleteAudioFromModule = async (req, res, next) => {
 // Delete test
 const deleteTest = async (req, res, next) => {
   const { id } = req.params;
+  const filter = { _id: id };
   const { _id: userId, role, supervisor } = req.user;
 
+  if (role === "teacher") filter.createdBy = userId;
+  else if (role === "supervisor") filter.supervisor = userId;
+
   try {
-    const deleted = await Test.findOneAndUpdate(
-      { _id: id, createdBy: userId },
-      { isDeleted: true, deletedBy: userId, deletedAt: Date.now() }
-    );
+    const deleted = await Test.findOneAndUpdate(filter, {
+      isDeleted: true,
+      deletedBy: userId,
+      deletedAt: Date.now(),
+    });
 
     if (!deleted) {
       return res.status(404).json({

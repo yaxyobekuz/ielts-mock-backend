@@ -1,9 +1,3 @@
-// Stats jobs
-const {
-  scheduleStatsUpdate,
-  scheduleUserStatsUpdate,
-} = require("../jobs/statsJobs");
-
 // Mongoose
 const mongoose = require("mongoose");
 
@@ -11,6 +5,9 @@ const mongoose = require("mongoose");
 const Link = require("../models/Link");
 const Test = require("../models/Test");
 const User = require("../models/User");
+
+// Agenda (job scheduler)
+const agenda = require("../config/agenda");
 
 // Helpers
 const { shuffleArray, pickAllowedFields } = require("../utils/helpers");
@@ -77,7 +74,7 @@ const prepareTestForUser = async (testId) => {
 
 // Create link
 const createLink = async (req, res, next) => {
-  const { _id: createdBy, supervisor, role } = req.user;
+  const { _id: createdBy, supervisor } = req.user;
   const { title, testId, maxUses, requireComment } = req.body;
 
   try {
@@ -102,14 +99,17 @@ const createLink = async (req, res, next) => {
     const statsUpdate = { "links.created": 1 };
     const userStatsUpdate = { "links.active": 1, "links.created": 1 };
 
-    await scheduleUserStatsUpdate(createdBy, userStatsUpdate);
-    await scheduleStatsUpdate(createdBy, role, supervisor, statsUpdate);
+    await agenda.now("update-user-stats", {
+      user: req.user,
+      teacherId: test.createdBy,
+      updateData: userStatsUpdate,
+    });
 
-    // If teacher, update supervisor stats too
-    if (role === "teacher" && supervisor) {
-      await scheduleUserStatsUpdate(supervisor, userStatsUpdate);
-      await scheduleStatsUpdate(supervisor, "supervisor", null, statsUpdate);
-    }
+    await agenda.now("update-stats", {
+      user: req.user,
+      updateData: statsUpdate,
+      teacherId: test.createdBy,
+    });
 
     res.status(201).json({
       link,
@@ -160,8 +160,8 @@ const updateLink = async (req, res, next) => {
 
 // Delete link
 const deleteLink = async (req, res, next) => {
-  const { _id, role, supervisor } = req.user;
   const id = req.params.id;
+  const { _id, role } = req.user;
 
   // Filter
   let filter = { _id: id };
@@ -181,14 +181,17 @@ const deleteLink = async (req, res, next) => {
     const statsUpdate = { "links.deleted": 1 };
     const userStatsUpdate = { "links.active": -1, "links.deleted": 1 };
 
-    await scheduleUserStatsUpdate(_id, userStatsUpdate);
-    await scheduleStatsUpdate(_id, role, supervisor, statsUpdate);
+    await agenda.now("update-user-stats", {
+      user: req.user,
+      teacherId: link.createdBy,
+      updateData: userStatsUpdate,
+    });
 
-    // If teacher, update supervisor stats too
-    if (role === "teacher" && supervisor) {
-      await scheduleUserStatsUpdate(supervisor, userStatsUpdate);
-      await scheduleStatsUpdate(supervisor, "supervisor", null, statsUpdate);
-    }
+    await agenda.now("update-stats", {
+      user: req.user,
+      updateData: statsUpdate,
+      teacherId: link.createdBy,
+    });
 
     res.json({
       link,
@@ -206,13 +209,6 @@ const getLink = async (req, res, next) => {
   const { _id: userId, role: userRole } = req.user;
 
   try {
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({
-        code: "invalidId",
-        message: "Havola ID yaroqsiz",
-      });
-    }
-
     const link = await Link.findById(id)
       .populate({
         path: "createdBy",
@@ -337,13 +333,6 @@ const getLinkPreview = async (req, res, next) => {
   const userAgent = req.headers["user-agent"];
 
   try {
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({
-        code: "invalidId",
-        message: "Havola yaroqsiz",
-      });
-    }
-
     const link = await Link.findById(id);
     if (!link) {
       return res.status(404).json({
@@ -358,32 +347,23 @@ const getLinkPreview = async (req, res, next) => {
 
     // Schedule stats update for link visits
     const teacherId = link.createdBy;
-    const supervisorId = link.supervisor;
-    const User = require("../models/User");
-    const teacher = await User.findById(teacherId).select("role");
+    const user = await User.findById(teacherId).lean();
 
-    if (teacher) {
-      const userStatsUpdate = { "links.totalVisits": 1 };
+    if (user) {
       const statsUpdate = { "links.totalVisits": 1 };
+      const userStatsUpdate = { "links.totalVisits": 1 };
 
-      await scheduleUserStatsUpdate(teacherId, userStatsUpdate);
-      await scheduleStatsUpdate(
+      await agenda.now("update-user-stats", {
+        user,
         teacherId,
-        teacher.role,
-        supervisorId,
-        statsUpdate
-      );
+        updateData: userStatsUpdate,
+      });
 
-      // If teacher, update supervisor stats too
-      if (teacher.role === "teacher" && supervisorId) {
-        await scheduleUserStatsUpdate(supervisorId, userStatsUpdate);
-        await scheduleStatsUpdate(
-          supervisorId,
-          "supervisor",
-          null,
-          statsUpdate
-        );
-      }
+      await agenda.now("update-stats", {
+        user,
+        teacherId,
+        updateData: statsUpdate,
+      });
     }
 
     const isAvailable = link.usedCount < link.maxUses;
@@ -431,31 +411,23 @@ const addUsage = async (req, res, next) => {
 
     // Schedule stats update for link usage
     const teacherId = link.createdBy;
-    const supervisorId = link.supervisor;
-    const teacher = await User.findById(teacherId).select("role");
+    const user = await User.findById(teacherId).lean();
 
-    if (teacher) {
+    if (user) {
       const statsUpdate = { "links.totalUsages": 1 };
       const userStatsUpdate = { "links.totalUsages": 1 };
 
-      await scheduleUserStatsUpdate(teacherId, userStatsUpdate);
-      await scheduleStatsUpdate(
+      await agenda.now("update-user-stats", {
+        user,
         teacherId,
-        teacher.role,
-        supervisorId,
-        statsUpdate
-      );
+        updateData: userStatsUpdate,
+      });
 
-      // If teacher, update supervisor stats too
-      if (teacher.role === "teacher" && supervisorId) {
-        await scheduleUserStatsUpdate(supervisorId, userStatsUpdate);
-        await scheduleStatsUpdate(
-          supervisorId,
-          "supervisor",
-          null,
-          statsUpdate
-        );
-      }
+      await agenda.now("update-stats", {
+        user,
+        teacherId,
+        updateData: statsUpdate,
+      });
     }
 
     const test = await prepareTestForUser(link.testId);

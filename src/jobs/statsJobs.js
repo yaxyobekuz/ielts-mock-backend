@@ -82,7 +82,9 @@ agenda.define("update-user-stats", async (job) => {
     // Supervisor
     else {
       await updateStats(user._id);
-      if (teacherId) await updateStats(teacherId);
+      if (teacherId && teacherId !== user._id) {
+        await updateStats(teacherId);
+      }
     }
   } catch (error) {
     console.error(`UserStats update xatolik (userId: ${user._id}):`, error);
@@ -185,13 +187,17 @@ agenda.define("update-stats", async (job) => {
     // Teacher
     if (user.role === "teacher") {
       await updateStats(user._id);
-      if (user.supervisor) await updateStats(user.supervisor, true);
+      if (user.supervisor) {
+        await updateStats(user.supervisor, true);
+      }
     }
 
     // Supervisor
     else {
       await updateStats(user._id, true);
-      if (teacherId) await updateStats(teacherId);
+      if (teacherId && teacherId !== user._id) {
+        await updateStats(teacherId);
+      }
     }
   } catch (error) {
     console.error(`Stats update xatolik (userId: ${user._id}):`, error);

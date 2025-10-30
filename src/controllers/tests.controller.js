@@ -100,10 +100,35 @@ const getTests = async (req, res, next) => {
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 10;
   const search = req.query.search?.trim() || "";
+  const teacherId = req.query.teacherId || "all";
 
   // Filter
   let filter = { isDeleted: false };
-  if (user.role === "supervisor") filter.supervisor = user._id;
+  // Supervisor
+  if (user.role === "supervisor") {
+    filter.supervisor = user._id;
+
+    if (
+      teacherId &&
+      teacherId !== "all" &&
+      mongoose.Types.ObjectId.isValid(teacherId)
+    ) {
+      filter.createdBy = teacherId;
+    }
+
+    if (
+      teacherId &&
+      teacherId !== "all" &&
+      !mongoose.Types.ObjectId.isValid(teacherId)
+    ) {
+      return res.status(404).json({
+        code: "teacherNotFound",
+        message: "Ustoz topilmadi",
+      });
+    }
+  }
+
+  // Teacher
   else if (user.role === "teacher") filter.createdBy = user._id;
 
   // Search by title

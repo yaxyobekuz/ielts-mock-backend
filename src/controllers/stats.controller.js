@@ -3,6 +3,57 @@ const Stats = require("../models/Stats");
 const UserStats = require("../models/UserStats");
 
 /**
+ * Fill missing dates with default stats
+ * @param {Array} stats - Array of existing stats
+ * @param {Date} startDate - Start date
+ * @param {Date} endDate - End date
+ * @returns {Array} - Complete stats array with filled gaps
+ */
+const fillMissingDates = (stats, startDate, endDate) => {
+  const filledStats = [];
+  const existingDates = new Map(
+    stats.map((stat) => [stat.date.toISOString().split("T")[0], stat])
+  );
+
+  const currentDate = new Date(startDate);
+  currentDate.setDate(currentDate.getDate() + 1);
+
+  while (currentDate <= endDate) {
+    const dateKey = currentDate.toISOString().split("T")[0];
+    const existingStat = existingDates.get(dateKey);
+
+    if (existingStat) {
+      filledStats.push(existingStat);
+    } else {
+      // Create default stat for missing date
+      filledStats.push({
+        date: new Date(currentDate),
+        tests: { created: 0, deleted: 0 },
+        submissions: { created: 0, graded: 0 },
+        results: {
+          created: 0,
+          avgOverall: 0,
+          avgReading: 0,
+          avgWriting: 0,
+          avgSpeaking: 0,
+          avgListening: 0,
+        },
+        links: {
+          active: 0,
+          created: 0,
+          totalVisits: 0,
+          totalUsages: 0,
+        },
+      });
+    }
+
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
+
+  return filledStats;
+};
+
+/**
  * Get dashboard statistics for last 7 days
  */
 const getDashboardStats = async (req, res, next) => {
@@ -21,8 +72,11 @@ const getDashboardStats = async (req, res, next) => {
       .sort({ date: 1 })
       .lean();
 
+    // Fill missing dates with default values
+    const filledStats = fillMissingDates(stats, startDate, endDate);
+
     // If no stats found, return empty summary and charts
-    if (stats.length === 0) {
+    if (filledStats.length === 0) {
       return res.status(200).json({
         code: "noData",
         data: { summary: {}, charts: {} },
@@ -39,7 +93,7 @@ const getDashboardStats = async (req, res, next) => {
     let totalSubmissionsGraded = 0;
     let totalSubmissionsCreated = 0;
 
-    const chartData = stats.map((stat) => {
+    const chartData = filledStats.map((stat) => {
       const visits = stat.links?.totalVisits || 0;
       const usages = stat.links?.totalUsages || 0;
       const activeLinks = stat.links?.active || 0;
@@ -103,7 +157,7 @@ const getDashboardStats = async (req, res, next) => {
 const getDetailedStats = async (req, res, next) => {
   const { startDate: startParam, endDate: endParam } = req.query;
 
-  const { _id: userId, role } = req.user;
+  const { _id: userId } = req.user;
   const endDate = endParam ? new Date(endParam) : new Date();
   const startDate = startParam ? new Date(startParam) : new Date();
 
@@ -120,7 +174,10 @@ const getDetailedStats = async (req, res, next) => {
       .sort({ date: 1 })
       .lean();
 
-    if (stats.length === 0) {
+    // Fill missing dates with default values
+    const filledStats = fillMissingDates(stats, startDate, endDate);
+
+    if (filledStats.length === 0) {
       return res.status(200).json({
         code: "noData",
         data: { summary: {}, charts: {} },
@@ -128,7 +185,7 @@ const getDetailedStats = async (req, res, next) => {
       });
     }
 
-    const periodData = stats.map((stat) => {
+    const periodData = filledStats.map((stat) => {
       const dateKey = stat.date.toISOString().split("T")[0];
       return {
         period: dateKey,
@@ -170,15 +227,20 @@ const getDetailedStats = async (req, res, next) => {
         results: {
           created: acc.results.created + curr.results.created,
           avgOverall:
-            acc.results.avgOverall + curr.results.avgOverall / stats.length,
+            acc.results.avgOverall +
+            curr.results.avgOverall / filledStats.length,
           avgReading:
-            acc.results.avgReading + curr.results.avgReading / stats.length,
+            acc.results.avgReading +
+            curr.results.avgReading / filledStats.length,
           avgWriting:
-            acc.results.avgWriting + curr.results.avgWriting / stats.length,
+            acc.results.avgWriting +
+            curr.results.avgWriting / filledStats.length,
           avgListening:
-            acc.results.avgListening + curr.results.avgListening / stats.length,
+            acc.results.avgListening +
+            curr.results.avgListening / filledStats.length,
           avgSpeaking:
-            acc.results.avgSpeaking + curr.results.avgSpeaking / stats.length,
+            acc.results.avgSpeaking +
+            curr.results.avgSpeaking / filledStats.length,
         },
         links: {
           created: acc.links.created + curr.links.created,

@@ -1,11 +1,8 @@
-// Stats jobs
-const {
-  scheduleStatsUpdate,
-  scheduleUserStatsUpdate,
-} = require("../jobs/statsJobs");
-
 // Mongoose
 const mongoose = require("mongoose");
+
+// Agenda (job scheduler)
+const agenda = require("../config/agenda");
 
 // Models
 const Part = require("../models/Part");
@@ -67,17 +64,15 @@ const createTest = async (req, res, next) => {
     const savedTest = await test.save();
 
     // Schedule stats update for teacher and supervisor
-    const statsUpdate = { "tests.created": 1 };
-    const userStatsUpdate = { "tests.active": 1, "tests.created": 1 };
+    await agenda.now("update-stats", {
+      user: req.user,
+      updateData: { "tests.created": 1 },
+    });
 
-    await scheduleUserStatsUpdate(createdBy, userStatsUpdate);
-    await scheduleStatsUpdate(createdBy, role, supervisor, statsUpdate);
-
-    // If teacher, update supervisor stats too
-    if (role === "teacher" && supervisor) {
-      await scheduleUserStatsUpdate(supervisor, userStatsUpdate);
-      await scheduleStatsUpdate(supervisor, "supervisor", null, statsUpdate);
-    }
+    await agenda.now("update-user-stats", {
+      user: req.user,
+      updateData: { "tests.active": 1, "tests.created": 1 },
+    });
 
     res.status(201).json({
       code: "testCreated",
@@ -466,18 +461,17 @@ const deleteTest = async (req, res, next) => {
       );
     }
 
-    // Schedule stats update for teacher and supervisor
-    const statsUpdate = { "tests.deleted": 1 };
-    const userStatsUpdate = { "tests.active": -1, "tests.deleted": 1 };
+    await agenda.now("update-stats", {
+      user: req.user,
+      teacherId: deleted.createdBy,
+      updateData: { "tests.deleted": 1 },
+    });
 
-    await scheduleUserStatsUpdate(userId, userStatsUpdate);
-    await scheduleStatsUpdate(userId, role, supervisor, statsUpdate);
-
-    // If teacher, update supervisor stats too
-    if (role === "teacher" && supervisor) {
-      await scheduleUserStatsUpdate(supervisor, userStatsUpdate);
-      await scheduleStatsUpdate(supervisor, "supervisor", null, statsUpdate);
-    }
+    await agenda.now("update-user-stats", {
+      user: req.user,
+      teacherId: deleted.createdBy,
+      updateData: { "tests.active": -1, "tests.deleted": 1 },
+    });
 
     res.json({
       code: "testDeleted",

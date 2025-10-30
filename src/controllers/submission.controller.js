@@ -1,12 +1,10 @@
-// Stats jobs
-const {
-  scheduleStatsUpdate,
-  scheduleUserStatsUpdate,
-} = require("../jobs/statsJobs");
+// Agenda (job scheduler)
+const agenda = require("../config/agenda");
 
 // Models
 const Link = require("../models/Link");
 const Test = require("../models/Test");
+const User = require("../models/User");
 const Submission = require("../models/Submission");
 
 // Helpers
@@ -14,7 +12,7 @@ const { getTestAnswers } = require("../utils/test");
 
 // Create a new submission
 const createSubmission = async (req, res, next) => {
-  const { _id: userId, role } = req.user;
+  const { _id: userId } = req.user;
   const { linkId, answers } = req.body;
 
   try {
@@ -50,15 +48,10 @@ const createSubmission = async (req, res, next) => {
       supervisor: test.supervisor,
     });
 
-    // Schedule stats update for teacher and supervisor
-    const teacherId = link.createdBy;
-    const supervisorId = test.supervisor;
-
-    // Get teacher data
-    const User = require("../models/User");
-    const teacher = await User.findById(teacherId).select("role");
-
-    if (teacher) {
+    // Schedule stats update for teacher
+    const teacherId = test.createdBy;
+    const user = await User.findById(teacherId).lean();
+    if (user) {
       const userStatsUpdate = {
         "submissions.active": 1,
         "submissions.created": 1,
@@ -66,24 +59,17 @@ const createSubmission = async (req, res, next) => {
       };
       const statsUpdate = { "submissions.created": 1 };
 
-      await scheduleUserStatsUpdate(teacherId, userStatsUpdate);
-      await scheduleStatsUpdate(
+      await agenda.now("update-user-stats", {
+        user,
         teacherId,
-        teacher.role,
-        supervisorId,
-        statsUpdate
-      );
+        updateData: userStatsUpdate,
+      });
 
-      // If teacher, update supervisor stats too
-      if (teacher.role === "teacher" && supervisorId) {
-        await scheduleUserStatsUpdate(supervisorId, userStatsUpdate);
-        await scheduleStatsUpdate(
-          supervisorId,
-          "supervisor",
-          null,
-          statsUpdate
-        );
-      }
+      await agenda.now("update-stats", {
+        user,
+        teacherId,
+        updateData: statsUpdate,
+      });
     }
 
     res.status(201).json({

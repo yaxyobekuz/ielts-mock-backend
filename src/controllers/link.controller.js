@@ -90,8 +90,8 @@ const createLink = async (req, res, next) => {
       title,
       testId,
       maxUses,
-      createdBy,
       requireComment,
+      createdBy: test.createdBy,
       supervisor: supervisor || createdBy,
     });
 

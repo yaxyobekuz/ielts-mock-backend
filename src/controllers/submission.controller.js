@@ -44,7 +44,7 @@ const createSubmission = async (req, res, next) => {
       student: userId,
       test: link.testId,
       finishedAt: Date.now(),
-      teacher: link.createdBy,
+      teacher: test.createdBy,
       supervisor: test.supervisor,
     });
 

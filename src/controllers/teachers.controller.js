@@ -79,6 +79,7 @@ const getTeachers = async (req, res, next) => {
   try {
     let filter = {};
     if (userRole === "supervisor") filter.supervisor = supervisorId;
+    else filter.role = "teacher";
 
     const [teachers, total] = await Promise.all([
       User.find(filter)

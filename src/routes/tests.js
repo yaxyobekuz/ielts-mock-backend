@@ -36,12 +36,7 @@ router.get("/", auth, notStudent, getTests);
  * Description: Retrieve latest tests
  * Access: Teacher, Supervisor
  */
-router.get(
-  "/latest",
-  auth,
-  roleCheck(["supervisor", "teacher"]),
-  getLatestTests
-);
+router.get("/latest", auth, notStudent, getLatestTests);
 
 /**
  * GET /tests/:id

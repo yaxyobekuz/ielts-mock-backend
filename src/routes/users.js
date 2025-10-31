@@ -6,6 +6,7 @@ const { upload } = require("../utils/multer.js");
 
 // Controllers
 const {
+  getUsers,
   updateUser,
   getUserById,
   updateUserAvatar,
@@ -14,6 +15,13 @@ const {
 // Middlewares
 const validateId = require("../middlewares/validateId");
 const { auth, roleCheck } = require("../middlewares/auth.js");
+
+/**
+ * GET /users
+ * Description: Retrieve all users
+ * Access: Admin, Owner
+ */
+router.get("/", auth, roleCheck(["admin", "owner"]), getUsers);
 
 /**
  * GET /users/:id

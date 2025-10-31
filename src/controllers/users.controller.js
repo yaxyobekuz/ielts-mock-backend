@@ -7,6 +7,53 @@ const { pickAllowedFields } = require("../utils/helpers");
 // Services
 const { uploadFile } = require("../services/uploadService");
 
+// Get users
+const getUsers = async (req, res, next) => {
+  // Pagination
+  const role = req.query.role;
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 20;
+  const skip = (page - 1) * limit;
+
+  const filter = {};
+
+  if (["owner", "admin", "teacher", "supervisor", "student"].includes(role)) {
+    filter.role = role;
+  }
+
+  try {
+    const [users, total] = await Promise.all([
+      User.find(filter)
+        .populate("avatar")
+        .select("-__v -password -balance -chatId -permissions -supervisor")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      User.countDocuments(filter),
+    ]);
+
+    const totalPages = Math.ceil(total / limit);
+    const hasNextPage = page < totalPages;
+    const hasPrevPage = page > 1;
+
+    res.json({
+      users,
+      code: "usersFetched",
+      message: "Foydalanuvchilar olindi",
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasNextPage,
+        hasPrevPage,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 // Get user
 const getUserById = async (req, res, next) => {
   const userId = req.params.id;
@@ -76,6 +123,7 @@ const updateUser = async (req, res, next) => {
 };
 
 module.exports = {
+  getUsers,
   updateUser,
   getUserById,
   updateUserAvatar,

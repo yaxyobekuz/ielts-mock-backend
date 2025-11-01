@@ -333,6 +333,7 @@ const getLinkPreview = async (req, res, next) => {
   const userAgent = req.headers["user-agent"];
 
   try {
+    // Get link
     const link = await Link.findById(id);
     if (!link) {
       return res.status(404).json({
@@ -341,6 +342,16 @@ const getLinkPreview = async (req, res, next) => {
       });
     }
 
+    // Check supervisor status
+    const supervisor = await User.findById(link.supervisor).lean();
+    if (supervisor && !supervisor.isActive) {
+      return res.status(403).json({
+        code: "linkInvalid",
+        message: "Havola yaroqsiz",
+      });
+    }
+
+    // Record visit
     link.visits.push({ userAgent, ip, userId });
     link.visitsCount = link.visitsCount + 1;
     await link.save();
@@ -390,6 +401,7 @@ const addUsage = async (req, res, next) => {
   const userAgent = req.headers["user-agent"];
 
   try {
+    // Get link
     const link = await Link.findById(id);
     if (!link) {
       return res.status(404).json({
@@ -398,6 +410,16 @@ const addUsage = async (req, res, next) => {
       });
     }
 
+    // Check supervisor status
+    const supervisor = await User.findById(link.supervisor).lean();
+    if (supervisor && !supervisor.isActive) {
+      return res.status(403).json({
+        code: "linkInvalid",
+        message: "Havola yaroqsiz",
+      });
+    }
+
+    // Check max uses
     if (link.usedCount >= link.maxUses) {
       return res.status(400).json({
         code: "maxUsesReached",
@@ -405,6 +427,7 @@ const addUsage = async (req, res, next) => {
       });
     }
 
+    // Record usage
     link.usedCount += 1;
     link.usages.push({ ip, userId, userAgent });
     await link.save();

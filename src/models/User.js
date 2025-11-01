@@ -30,7 +30,7 @@ const User = new mongoose.Schema(
     chatId: { type: Number },
     lastName: { type: String },
     balance: { type: Number, default: 0 },
-    isActive: { type: Boolean, default: true },
+    isActive: { type: Boolean, default: false },
     password: { type: String, required: true },
     firstName: { type: String, required: true },
     isVerified: { type: Boolean, default: false },

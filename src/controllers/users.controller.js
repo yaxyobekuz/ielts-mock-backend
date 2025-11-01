@@ -59,7 +59,17 @@ const getUserById = async (req, res, next) => {
   const userId = req.params.id;
 
   try {
-    const user = await User.findById(userId).select("-password");
+    const user = await User.findById(userId)
+      .select("-password -chatId -permissions")
+      .populate("avatar");
+
+    if (!user) {
+      return res.status(404).json({
+        code: "userNotFound",
+        message: "Foydalanuvchi topilmadi",
+      });
+    }
+
     res.json({
       user,
       code: "userFetched",
@@ -122,9 +132,42 @@ const updateUser = async (req, res, next) => {
   }
 };
 
+// Update user for admin
+const updateUserForAdmin = async (req, res, next) => {
+  const userId = req.params.id;
+  const updatedFields = pickAllowedFields(req.body, ["isActive", "role"]);
+
+  try {
+    const user = await User.findOneAndUpdate(
+      { _id: userId, role: { $ne: "owner" } },
+      updatedFields,
+      { new: true }
+    )
+      .select("-password -chatId -permissions")
+      .populate("avatar");
+
+    if (!user) {
+      return res.status(404).json({
+        code: "userNotFound",
+        message: "Foydalanuvchi topilmadi",
+      });
+    }
+
+    res.json({
+      user,
+      code: "userUpdated",
+      updates: updatedFields,
+      message: "Foydalanuvchi ma'lumotlari yangilandi",
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   getUsers,
   updateUser,
   getUserById,
   updateUserAvatar,
+  updateUserForAdmin,
 };

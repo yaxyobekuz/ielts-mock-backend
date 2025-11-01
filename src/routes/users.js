@@ -10,6 +10,7 @@ const {
   updateUser,
   getUserById,
   updateUserAvatar,
+  updateUserForAdmin,
 } = require("../controllers/users.controller.js");
 
 // Middlewares
@@ -42,6 +43,13 @@ router.get(
  * Access: Authenticated users
  */
 router.put("/me", auth, updateUser);
+
+/**
+ * PUT /users/:id
+ * Description: Update a specific user's profile by ID
+ * Access: Admin, Owner
+ */
+router.put("/:id", auth, roleCheck(["admin", "owner"]), updateUserForAdmin);
 
 /**
  * PUT /users/me/avatar
